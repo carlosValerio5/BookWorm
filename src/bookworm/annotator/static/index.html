@@ -3,45 +3,77 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
     <title>BookWorm Annotator</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314120b'/%3E%3Crect x='8' y='8' width='16' height='16' rx='2' fill='none' stroke='%23edecec' stroke-width='2'/%3E%3Ccircle cx='24' cy='8' r='3' fill='%23f54e00'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="/static/annotator.css">
   </head>
   <body>
-    <aside id="photo-panel">
-      <h1>BookWorm Annotator</h1>
-      <ul id="photo-list"></ul>
-    </aside>
+    <div class="app-window">
+      <header class="title-bar">
+        <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="window-title">
+          <h1 id="current-photo" class="title-photo">BookWorm Annotator</h1>
+          <span id="photo-size" class="title-size"></span>
+        </div>
+        <div class="title-meta">
+          <span id="save-status" class="save-status" role="status"></span>
+          <span id="progress-count" class="progress-count"></span>
+        </div>
+      </header>
 
-    <main id="canvas-panel">
-      <div id="status-bar">
-        <span id="current-photo">Pick a photo on the left</span>
-        <span id="save-status"></span>
-      </div>
-      <div id="canvas-frame" class="locked">
-        <img id="photo" alt="">
-        <canvas id="box-canvas"></canvas>
-        <p id="locked-hint">Pick a class first: 1 isbn, 2 cover, 3 unknown</p>
-      </div>
-    </main>
+      <nav class="photo-queue" aria-label="Photos">
+        <section class="queue-group" aria-labelledby="to-label-heading">
+          <h2 id="to-label-heading" class="group-label">To label <span id="to-label-count" class="group-count"></span></h2>
+          <ul id="to-label-list" class="queue-list"></ul>
+        </section>
+        <section class="queue-group" aria-labelledby="labeled-heading">
+          <h2 id="labeled-heading" class="group-label">Labeled <span id="labeled-count" class="group-count"></span></h2>
+          <ul id="labeled-list" class="queue-list"></ul>
+        </section>
+      </nav>
 
-    <aside id="label-panel">
-      <section>
-        <h2>1. Class</h2>
-        <div id="kind-buttons" class="button-grid"></div>
-      </section>
-      <section>
-        <h2>2. Box type</h2>
-        <div id="box-type-buttons" class="button-grid"></div>
-      </section>
-      <section>
-        <h2>3. Boxes</h2>
-        <ol id="box-list"></ol>
-      </section>
-      <ul id="problem-list"></ul>
-      <button id="save-button" type="button">Save <kbd>Ctrl/⌘ S</kbd></button>
-      <p class="hint">Drag on the photo to draw a box. Drag a box to move it. Delete removes the selected box. N opens the next photo.</p>
-    </aside>
+      <main id="photo-well" class="photo-well">
+        <div id="canvas-frame" class="canvas-frame" hidden>
+          <canvas id="box-canvas" aria-label="Photo with labeled boxes"></canvas>
+          <div class="class-lock" aria-hidden="true">
+            <p class="class-lock-title">Pick a class to start drawing</p>
+            <p class="class-lock-keys"><span><kbd>1</kbd>isbn</span><span><kbd>2</kbd>cover</span><span><kbd>3</kbd>unknown</span></p>
+          </div>
+        </div>
+        <div id="empty-stage" class="empty-stage">
+          <p id="empty-stage-title" class="empty-stage-title">Pick a photo from the list</p>
+          <p id="empty-stage-hint" class="empty-stage-hint">or press <kbd>n</kbd> to open the first one</p>
+        </div>
+      </main>
 
+      <aside class="label-pane" aria-label="Labels">
+        <section class="pane-section">
+          <h2 class="pane-label">Class</h2>
+          <div id="kind-buttons" class="segmented" role="group" aria-label="Class"></div>
+        </section>
+        <section class="pane-section">
+          <h2 class="pane-label">Box type</h2>
+          <div id="box-type-buttons" class="type-grid" role="group" aria-label="Box type"></div>
+        </section>
+        <section class="pane-section boxes-section">
+          <h2 class="pane-label">Boxes <span id="box-count" class="group-count"></span></h2>
+          <ol id="box-list" class="box-list"></ol>
+        </section>
+        <ul id="problem-list" class="problem-list" aria-live="polite"></ul>
+        <div class="pane-footer">
+          <button id="save-button" class="pill pill-primary" type="button"><span id="save-label">Save</span><kbd>⌘S</kbd></button>
+        </div>
+      </aside>
+
+      <footer class="status-bar">
+        <span id="status-mode" class="status-mode">Browse</span>
+        <span id="status-type" class="status-type"></span>
+        <span id="status-cursor" class="status-cursor"></span>
+        <span id="status-timer" class="status-timer">0:00</span>
+        <span class="status-hints"><span><kbd>Del</kbd>remove box</span><span><kbd>n</kbd>next photo</span></span>
+      </footer>
+    </div>
     <script src="/static/annotator.js"></script>
   </body>
 </html>
