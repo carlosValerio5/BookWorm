@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 import httpx
 import structlog
 
+from bookworm.crawler.address_policy import is_public_address
 from bookworm.crawler.crawl_state import (
     enqueue_requests,
     find_next_pending_request,
@@ -64,6 +65,7 @@ class CrawlContext:
     robots_policy: RobotsPolicy
     pacer: HostPacer
     dataset_dir: Path
+    resolve_host_addresses: Callable[[str], list[str]]
 
 
 @dataclass(frozen=True)
@@ -124,6 +126,7 @@ def follow_redirect(context: CrawlContext, request: CrawlRequest, redirect_url: 
 
 
 def process_request(context: CrawlContext, request: CrawlRequest) -> int:
+    ensure_public_host(context, request)
     ensure_allowed_by_robots(context.robots_policy, request)
     context.pacer.wait_for_host(urlsplit(request.url).netloc)
     response = fetch_request(context.client, request)
@@ -131,6 +134,20 @@ def process_request(context: CrawlContext, request: CrawlRequest) -> int:
     ensure_not_redirected(response)
     ensure_success_status(response)
     return RESPONSE_HANDLER_BY_PURPOSE[request.purpose](context, response)
+
+
+def ensure_public_host(context: CrawlContext, request: CrawlRequest) -> None:
+    host = urlsplit(request.url).hostname or ""
+    host_addresses = resolve_addresses_or_fail(context, host)
+    if not all(is_public_address(address) for address in host_addresses):
+        raise RequestSkipped(f"non_public_address:{host}")
+
+
+def resolve_addresses_or_fail(context: CrawlContext, host: str) -> list[str]:
+    try:
+        return context.resolve_host_addresses(host)
+    except OSError as error:
+        raise RequestFailed(f"host_not_resolved:{host}") from error
 
 
 def ensure_allowed_by_robots(robots_policy: RobotsPolicy, request: CrawlRequest) -> None:

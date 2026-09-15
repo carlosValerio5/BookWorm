@@ -6,6 +6,7 @@ from typing import Annotated
 
 import typer
 
+from bookworm.crawler.address_policy import resolve_host_addresses
 from bookworm.crawler.crawl_loop import CrawlContext, run_crawl
 from bookworm.crawler.crawl_state import (
     count_requests_by_status,
@@ -63,6 +64,7 @@ def run(
             robots_policy=RobotsPolicy(client),
             pacer=HostPacer(min_seconds_between_requests=source.min_seconds_between_requests),
             dataset_dir=dataset_dir,
+            resolve_host_addresses=resolve_host_addresses,
         )
         summary = run_crawl(context, max_requests)
     typer.echo(json.dumps(asdict(summary)))
