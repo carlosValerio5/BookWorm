@@ -7,7 +7,7 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 ## [Unreleased]
 
 ### Added
-- `bookworm-crawl run <source>` collects candidate photos for YOLO fine-tuning. A run picks up where the last one stopped, obeys robots.txt, waits between requests to each site, and stops on 401, 403 or 429. State is kept in `dataset/crawled/crawl_state.sqlite3`.
+- `bookworm-crawl run <source>` collects candidate photos for YOLO fine-tuning. A run picks up where the last one stopped, obeys robots.txt, waits between requests to each site, and stops on 429. State is kept in `dataset/crawled/crawl_state.sqlite3`.
 - `bookworm-crawl status` prints request counts per source and saved photos per hint label.
 - `blog_pages` source: approved book-haul blogs from `crawler_seeds/blog_pages.toml`, photos from 600px.
 - `commons_categories` source: Wikimedia Commons category pages from `crawler_seeds/commons_categories.toml`. Downloads the largest standard thumbnail of at least 640px, keeps the license, and skips PNGs.
