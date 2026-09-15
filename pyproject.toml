@@ -31,6 +31,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["scripts"]
 addopts = "--strict-markers"
 markers = [
     "slow: loads YOLO or EasyOCR models, downloads weights on first run",
