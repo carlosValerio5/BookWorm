@@ -76,5 +76,5 @@ Here you'll record any issues we find along the way, this is how we keep improvi
 - T10 (2026-09-15): `api.openverse.org/robots.txt` disallows `/v1/images/` for every agent and fully blocks AI crawlers. Read the robots.txt of an API host before building a source on it.
 - T11 (2026-09-15): Openverse API answers can take 30s+. A 30s client timeout fails; the crawler uses 90s.
 - T12 (2026-09-15): Python 3.13 warns `ResourceWarning: unclosed database` for SQLite connections left open. `with connection:` only commits; close with `contextlib.closing`.
-- T13 (2026-09-15): `commons.wikimedia.org/robots.txt` disallows `/w/` (so `api.php`) and `/api/` for every agent, and Wikimedia's Robot policy says to honor robots.txt. A robots-respecting crawler must use `/wiki/Category:` and `/wiki/File:` HTML pages; originals on `upload.wikimedia.org` are allowed.
+- T13 (2026-09-15): `commons.wikimedia.org/robots.txt` disallows `/w/` (so `api.php`) and `/api/` for every agent, and Wikimedia's Robot policy says to honor robots.txt. A robots-respecting crawler must use `/wiki/Category:` and `/wiki/File:` HTML pages; originals on `upload.wikimedia.org` are allowed. Category pagination links point to `/w/index.php`, so only the first 200 files of each category are reachable.
 

@@ -85,3 +85,62 @@ Blog run not done: `crawler_seeds/blog_pages.toml` is a draft waiting for approv
 - Blog pagination (D16) is not followed.
 - No perceptual-hash dedupe; the same photo at two sizes is saved twice.
 - `bookworm-crawl status` also prints JSON log lines on stderr; stdout stays clean JSON.
+
+---
+
+# F9–F11 + B3: Commons source, 600px blog minimum, spine label (2026-09-15)
+
+**Checkpoints**: RED `0593dc8`, GREEN `8ffd8bf`; B3 RED `9a83042`, GREEN `44218c0`.
+
+## Probe (F0)
+| # | Finding |
+|---|---|
+| D20 | Commons `robots.txt` disallows `/w/` (API) and `/api/`; Robot policy says honor robots.txt |
+| D28 | Category pagination links are `/w/index.php?...`, disallowed; only the first 200 files per category |
+| D29 | Each file is linked twice on a category page (399 links, 200 unique) |
+| D30 | Extensions mix case (`.JPG`) and include `.ogg` |
+| D31 | File pages list standard thumbnails (`.mw-thumbnail-link`: 330, 1280, 3840) |
+
+**Design:** category page → photo file pages only (`.jpg/.jpeg/.png/.webp`) → largest standard thumbnail ≥ 640px, else original; query string removed; `license` label from `.licensetpl_short`. No pagination, no subcategories.
+
+## RED / GREEN
+- RED: `4 failed, 139 passed, 1 error` (`ModuleNotFoundError: bookworm.crawler.sources.commons_categories`, `640 == 600`, `'cover' == 'spine'`, `commons_categories` not registered).
+- GREEN: `uv run pytest -q -m "not slow" -W error::ResourceWarning --cov=bookworm.crawler` → **153 passed**, 99%, `commons_categories.py` 100%.
+
+## B3: downloads waited behind pages
+First real Commons run: `50 handled, 0 saved`. The queue was strictly FIFO, so 46 downloads sat behind 221 file pages.
+Fix: `find_next_pending_request` orders by `purpose = 'download' DESC, queue_position` (still deterministic).
+- RED: `AssertionError: 'https://blog.example/page-2' == 'https://img.example/photo.jpg'`.
+- GREEN: **154 passed**.
+
+## Real runs
+| Run | Result |
+|---|---|
+| `blog_pages`, 50 requests (before F10) | 19 saved (6.2 MB), 21 skipped too small (six at 600px) |
+| `commons_categories`, 50 requests (before B3) | 0 saved |
+| `commons_categories`, 50 requests (after B3) | **32 saved** (22 `isbn`, 10 `cover`, 29 MB), 16 skipped < 640px, 219 file pages pending |
+
+Photos checked by eye:
+- `ISBN`: real photos of barcodes and ISBN text on book backs; one diagram slipped in (`ISBN_Details-ar.png`). **D33**
+- `Book sales`: wide scenes (a 1974 crowd, a warehouse of book stacks), not covers. **D34**
+
+## Test specification (new)
+| # | Guarantee | Test | Type | Result |
+|---|---|---|---|---|
+| 23 | Category URL uses underscores | `test_category_url_uses_underscores` | unit | PASS |
+| 24 | Seeds parse each category with its hint label | `test_seed_requests_parse_each_category_page` | unit | PASS |
+| 25 | Category page queues each photo file page once; no pagination, subcategories or footer links | `test_category_page_queues_each_photo_file_page_once` | unit | PASS |
+| 26 | Non-photo files (svg, ogg, pdf) are not queued | `test_category_page_skips_files_that_are_not_photos` | unit | PASS |
+| 27 | Largest thumbnail ≥ 640px, query removed, license stripped | `test_file_page_downloads_the_largest_thumbnail_with_its_license` | unit | PASS |
+| 28 | Original is used when thumbnails are too small | `test_file_page_downloads_the_original_when_thumbnails_are_too_small` | unit | PASS |
+| 29 | Missing license → empty label; missing original → `ExtractionError`; unknown page → `ExtractionError` | `test_commons_categories.py` (4) | unit | PASS |
+| 30 | Blog minimum is 600px | `test_blog_source_keeps_images_from_600px` | unit | PASS |
+| 31 | Blog images with "spine" in the URL get `expected_content = spine` | `test_extract_labels_images_named_spine_as_spine` | unit | PASS |
+| 32 | Committed seeds use only `cover`/`isbn`/`spine`; every source has a seed file | `test_seed_files.py` | unit | PASS |
+| 33 | Pending downloads are taken before pages queued earlier | `test_downloads_are_taken_before_pages_queued_earlier` | unit | PASS |
+
+## Known gaps (new)
+- D33: Commons PNGs are often diagrams.
+- D34: `Book sales` is labeled `cover` but gives scene photos.
+- 3840px thumbnails are ~1 MB each; 1280px would be ~4× smaller.
+- Photos saved before F11 keep their old labels.
