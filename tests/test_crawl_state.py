@@ -48,6 +48,21 @@ def test_next_pending_request_follows_insertion_order(crawl_state: sqlite3.Conne
     assert taken_urls == urls
 
 
+def test_downloads_are_taken_before_pages_queued_earlier(crawl_state: sqlite3.Connection) -> None:
+    enqueue_requests(
+        crawl_state,
+        [
+            create_crawl_request(url="https://blog.example/page-2"),
+            create_crawl_request(url="https://img.example/photo.jpg", purpose=RequestPurpose.DOWNLOAD),
+        ],
+    )
+
+    next_request = find_next_pending_request(crawl_state, TEST_SOURCE_NAME)
+
+    assert next_request is not None
+    assert next_request.url == "https://img.example/photo.jpg"
+
+
 def test_next_pending_request_is_none_when_queue_is_empty(crawl_state: sqlite3.Connection) -> None:
     assert find_next_pending_request(crawl_state, TEST_SOURCE_NAME) is None
 
