@@ -4,9 +4,12 @@ import cv2
 import numpy as np
 import pillow_heif
 import zxingcpp
+from matplotlib import font_manager
 from PIL import Image, ImageDraw, ImageFont
 
 pillow_heif.register_heif_opener()
+
+ACCENTED_TEXT_FONT_PATH = font_manager.findfont("DejaVu Sans")
 
 WHITE = 255
 BLACK_BGR = (0, 0, 0)
@@ -26,7 +29,7 @@ def create_solid_color_image(color_bgr: tuple[int, int, int], height: int = 480,
 
 def create_accented_text_image(text: str) -> np.ndarray:
     canvas = Image.new("RGB", (1000, 200), "white")
-    ImageDraw.Draw(canvas).text((30, 40), text, fill="black", font=ImageFont.load_default(size=100))
+    ImageDraw.Draw(canvas).text((30, 40), text, fill="black", font=ImageFont.truetype(ACCENTED_TEXT_FONT_PATH, size=100))
     return cv2.cvtColor(np.asarray(canvas), cv2.COLOR_RGB2BGR)
 
 

@@ -9,7 +9,8 @@ from bookworm.scan_types import BoundingBox, RecognizedText
 
 logger = structlog.stdlib.get_logger(__name__)
 
-TEXT_READER_LANGUAGES = ("en",)
+TEXT_READER_LANGUAGES = ("es", "en")
+MINIMUM_TEXT_CONFIDENCE = 0.4
 
 type EasyOcrReading = tuple[list[list[float]], str, float]
 
@@ -23,9 +24,15 @@ def load_text_reader() -> easyocr.Reader:
 def recognize_text(image: np.ndarray, text_reader: easyocr.Reader) -> list[RecognizedText]:
     with log_call(logger, "recognize_text"):
         raw_readings = text_reader.readtext(image)
-        texts = convert_easyocr_output(raw_readings)
-        logger.info("text_recognized", text_count=len(texts), texts=[text.text for text in texts])
-    return texts
+        all_texts = convert_easyocr_output(raw_readings)
+        confident_texts = keep_confident_texts(all_texts)
+        logger.info(
+            "text_recognized",
+            minimum_confidence=MINIMUM_TEXT_CONFIDENCE,
+            kept_texts=[text.text for text in confident_texts],
+            dropped_texts=[text.text for text in all_texts if text not in confident_texts],
+        )
+    return confident_texts
 
 
 def convert_easyocr_output(raw_readings: list[EasyOcrReading]) -> list[RecognizedText]:
@@ -33,3 +40,7 @@ def convert_easyocr_output(raw_readings: list[EasyOcrReading]) -> list[Recognize
         RecognizedText(text=text, confidence=round(float(confidence), 4), box=BoundingBox.from_points(corners))
         for corners, text, confidence in raw_readings
     ]
+
+
+def keep_confident_texts(texts: list[RecognizedText]) -> list[RecognizedText]:
+    return [text for text in texts if text.confidence >= MINIMUM_TEXT_CONFIDENCE]
