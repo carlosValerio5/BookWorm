@@ -34,6 +34,15 @@ def test_unreachable_robots_file_disallows_everything() -> None:
     assert RobotsPolicy(build_timing_out_client()).is_url_allowed("https://blog.example/2026/07/haul/") is False
 
 
+def test_redirected_robots_file_is_followed() -> None:
+    moved_robots_url = "https://www.blog.example/robots.txt"
+    client = build_mock_client(
+        {moved_robots_url: (200, "text/plain", ROBOTS_BODY)}, [], redirect_locations_by_url={ROBOTS_URL: moved_robots_url}
+    )
+
+    assert RobotsPolicy(client).is_url_allowed("https://blog.example/private/photo.jpg") is False
+
+
 def test_robots_file_is_fetched_once_per_host() -> None:
     requested_urls: list[str] = []
     policy = RobotsPolicy(build_mock_client({ROBOTS_URL: (200, "text/plain", ROBOTS_BODY)}, requested_urls))

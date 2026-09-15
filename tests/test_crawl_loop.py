@@ -4,7 +4,14 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
-from crawler_factories import MISSING_ROBOTS_ROUTE, MockRoute, build_mock_client, create_crawl_request, create_encoded_image
+from crawler_factories import (
+    MISSING_ROBOTS_ROUTE,
+    MockRoute,
+    build_mock_client,
+    create_crawl_request,
+    create_encoded_image,
+    create_png_header,
+)
 
 from bookworm.crawler.crawl_loop import CrawlContext, StopReason, run_crawl
 from bookworm.crawler.crawl_state import (
@@ -26,6 +33,7 @@ ROUTES_WITHOUT_ROBOTS = {
     "https://blog.example/robots.txt": MISSING_ROBOTS_ROUTE,
     "https://img.example/robots.txt": MISSING_ROBOTS_ROUTE,
 }
+DISALLOW_EVERYTHING_ROUTE = (200, "text/plain", b"User-agent: *\nDisallow: /\n")
 
 ContextBuilder = Callable[..., CrawlContext]
 
@@ -54,7 +62,7 @@ FAKE_SOURCE = CrawlSource(
     min_seconds_between_requests=0.0,
     max_depth=1,
     min_image_long_side=64,
-    accepted_image_media_types=frozenset({"image/jpeg"}),
+    accepted_image_media_types=frozenset({"image/jpeg", "image/png"}),
     build_seed_requests=lambda seed_file: [],
     extract_requests=extract_fake_requests,
 )
@@ -76,8 +84,11 @@ def build_context(tmp_path: Path) -> Iterator[ContextBuilder]:
         routes_by_url: dict[str, MockRoute],
         requested_urls: list[str],
         timing_out_urls: frozenset[str] = frozenset(),
+        redirect_locations_by_url: dict[str, str] | None = None,
     ) -> CrawlContext:
-        client = build_mock_client({**ROUTES_WITHOUT_ROBOTS, **routes_by_url}, requested_urls, timing_out_urls)
+        client = build_mock_client(
+            {**ROUTES_WITHOUT_ROBOTS, **routes_by_url}, requested_urls, timing_out_urls, redirect_locations_by_url
+        )
         context = CrawlContext(
             source=FAKE_SOURCE,
             connection=open_crawl_state(tmp_path / "crawl_state.sqlite3"),
@@ -105,6 +116,10 @@ def run_seeded_crawl(build_context: ContextBuilder, routes_by_url: dict[str, Moc
     enqueue_seed_page(context)
     run_crawl(context, max_requests=10)
     return context
+
+
+def list_saved_source_urls(context: CrawlContext) -> list[str]:
+    return [source_url for (source_url,) in context.connection.execute("SELECT source_url FROM saved_files")]
 
 
 def test_parse_then_download_saves_the_image_with_its_labels(build_context: ContextBuilder) -> None:
@@ -165,11 +180,27 @@ def test_rate_limited_response_stops_the_run_and_keeps_the_request_pending(build
     assert count_requests_by_status(context.connection, FAKE_SOURCE_NAME) == {"done": 1, "pending": 1}
 
 
+def test_forbidden_download_is_failed_and_the_run_continues(build_context: ContextBuilder) -> None:
+    forbidden_image_url = "https://img.example/hotlink-protected.jpg"
+    routes_by_url = {
+        SEED_URL: page_route(f"download {forbidden_image_url}", f"download {IMAGE_URL}"),
+        forbidden_image_url: (403, "text/html", b"hotlink forbidden"),
+        IMAGE_URL: image_route(),
+    }
+    context = build_context(routes_by_url, [])
+    enqueue_seed_page(context)
+
+    summary = run_crawl(context, max_requests=10)
+
+    assert (summary.files_saved, summary.stop_reason) == (1, StopReason.QUEUE_EMPTY)
+    assert count_requests_by_status(context.connection, FAKE_SOURCE_NAME) == {"done": 2, "failed": 1}
+
+
 def test_request_disallowed_by_robots_is_skipped_without_fetching(build_context: ContextBuilder) -> None:
     requested_urls: list[str] = []
     routes_by_url = {
         SEED_URL: page_route(f"download {IMAGE_URL}"),
-        "https://img.example/robots.txt": (200, "text/plain", b"User-agent: *\nDisallow: /\n"),
+        "https://img.example/robots.txt": DISALLOW_EVERYTHING_ROUTE,
         IMAGE_URL: image_route(),
     }
     context = build_context(routes_by_url, requested_urls)
@@ -181,9 +212,48 @@ def test_request_disallowed_by_robots_is_skipped_without_fetching(build_context:
     assert count_requests_by_status(context.connection, FAKE_SOURCE_NAME) == {"done": 1, "skipped": 1}
 
 
+def test_redirect_to_a_host_that_disallows_us_is_never_fetched(build_context: ContextBuilder) -> None:
+    requested_urls: list[str] = []
+    forbidden_photo_url = "https://forbidden.example/photo.jpg"
+    routes_by_url = {
+        SEED_URL: page_route(f"download {IMAGE_URL}"),
+        "https://forbidden.example/robots.txt": DISALLOW_EVERYTHING_ROUTE,
+        forbidden_photo_url: image_route(),
+    }
+    context = build_context(routes_by_url, requested_urls, redirect_locations_by_url={IMAGE_URL: forbidden_photo_url})
+    enqueue_seed_page(context)
+
+    run_crawl(context, max_requests=10)
+
+    assert forbidden_photo_url not in requested_urls
+    assert count_requests_by_status(context.connection, FAKE_SOURCE_NAME) == {"done": 1, "skipped": 2}
+
+
+def test_redirected_image_is_saved_under_its_final_url(build_context: ContextBuilder) -> None:
+    final_image_url = "https://img.example/final.jpg"
+    context = build_context(
+        {SEED_URL: page_route(f"download {IMAGE_URL}"), final_image_url: image_route()},
+        [],
+        redirect_locations_by_url={IMAGE_URL: final_image_url},
+    )
+    enqueue_seed_page(context)
+
+    run_crawl(context, max_requests=10)
+
+    assert list_saved_source_urls(context) == [final_image_url]
+
+
 def test_image_smaller_than_the_minimum_is_skipped(build_context: ContextBuilder) -> None:
     small_image_route = image_route(create_encoded_image(width=32, height=32))
     context = run_seeded_crawl(build_context, {SEED_URL: page_route(f"download {IMAGE_URL}"), IMAGE_URL: small_image_route})
+
+    assert count_requests_by_status(context.connection, FAKE_SOURCE_NAME) == {"done": 1, "skipped": 1}
+    assert count_saved_files_by_expected_content(context.connection) == {}
+
+
+def test_image_larger_than_the_maximum_is_skipped(build_context: ContextBuilder) -> None:
+    oversized_image_route = (200, "image/png", create_png_header(width=60000, height=40000))
+    context = run_seeded_crawl(build_context, {SEED_URL: page_route(f"download {IMAGE_URL}"), IMAGE_URL: oversized_image_route})
 
     assert count_requests_by_status(context.connection, FAKE_SOURCE_NAME) == {"done": 1, "skipped": 1}
     assert count_saved_files_by_expected_content(context.connection) == {}

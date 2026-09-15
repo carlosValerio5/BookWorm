@@ -27,6 +27,21 @@ def test_fetch_returns_error_status_without_raising() -> None:
     assert fetch_request(client, create_crawl_request(url=PAGE_URL)).status_code == 404
 
 
+def test_fetch_keeps_redirects_unfollowed_with_their_absolute_location() -> None:
+    client = build_mock_client({}, [], redirect_locations_by_url={PAGE_URL: "/moved"})
+
+    response = fetch_request(client, create_crawl_request(url=PAGE_URL))
+
+    assert (response.status_code, response.redirect_url) == (302, "https://blog.example/moved")
+
+
+def test_fetch_raises_fetch_error_when_the_body_is_larger_than_the_limit() -> None:
+    client = build_mock_client({PAGE_URL: (200, "image/jpeg", b"x" * 2048)}, [])
+
+    with pytest.raises(FetchError):
+        fetch_request(client, create_crawl_request(url=PAGE_URL), max_response_bytes=1024)
+
+
 def test_fetch_raises_fetch_error_on_timeout() -> None:
     with pytest.raises(FetchError):
         fetch_request(build_timing_out_client(), create_crawl_request(url=PAGE_URL))

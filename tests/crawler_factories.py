@@ -1,4 +1,5 @@
 import json
+import struct
 
 import cv2
 import httpx
@@ -10,6 +11,7 @@ from bookworm.crawler.http_fetching import build_http_client
 TEST_SOURCE_NAME = "test_source"
 TEST_USER_AGENT = "bookworm-crawler/test (+tester@example.com)"
 MISSING_ROBOTS_ROUTE = (404, "text/plain", b"")
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 MockRoute = tuple[int, str, bytes]
 
@@ -18,6 +20,11 @@ def create_encoded_image(width: int, height: int, extension: str = ".jpg") -> by
     pixels = np.full((height, width, 3), 200, dtype=np.uint8)
     _, encoded_image = cv2.imencode(extension, pixels)
     return encoded_image.tobytes()
+
+
+def create_png_header(width: int, height: int) -> bytes:
+    image_header_fields = struct.pack(">II", width, height) + b"\x08\x02\x00\x00\x00"
+    return PNG_SIGNATURE + struct.pack(">I", 13) + b"IHDR" + image_header_fields + b"\x00\x00\x00\x00"
 
 
 def create_crawl_request(
@@ -74,12 +81,17 @@ def build_mock_client(
     routes_by_url: dict[str, MockRoute],
     requested_urls: list[str],
     timing_out_urls: frozenset[str] = frozenset(),
+    redirect_locations_by_url: dict[str, str] | None = None,
 ) -> httpx.Client:
+    redirect_locations = redirect_locations_by_url or {}
+
     def respond(request: httpx.Request) -> httpx.Response:
         requested_url = str(request.url)
         requested_urls.append(requested_url)
         if requested_url in timing_out_urls:
             raise httpx.ReadTimeout("read timed out", request=request)
+        if requested_url in redirect_locations:
+            return httpx.Response(302, headers={"location": redirect_locations[requested_url]})
         status_code, media_type, body = routes_by_url.get(requested_url, (404, "text/plain", b""))
         return httpx.Response(status_code, headers={"content-type": media_type}, content=body)
 
