@@ -37,6 +37,7 @@ def use_mock_http(monkeypatch: pytest.MonkeyPatch, routes_by_url: dict[str, Mock
         return build_mock_client(routes_by_url, [])
 
     monkeypatch.setattr(crawl_cli, "build_http_client", build_mock_http_client)
+    monkeypatch.setattr(crawl_cli, "resolve_host_addresses", lambda host: ["93.184.216.34"])
 
 
 def build_run_arguments(tmp_path: Path, source_name: str = "openverse_photos") -> list[str]:

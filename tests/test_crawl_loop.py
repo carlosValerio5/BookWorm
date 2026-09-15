@@ -1,5 +1,6 @@
 import hashlib
 import json
+import socket
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
@@ -34,8 +35,13 @@ ROUTES_WITHOUT_ROBOTS = {
     "https://img.example/robots.txt": MISSING_ROBOTS_ROUTE,
 }
 DISALLOW_EVERYTHING_ROUTE = (200, "text/plain", b"User-agent: *\nDisallow: /\n")
+PUBLIC_TEST_ADDRESS = "93.184.216.34"
 
 ContextBuilder = Callable[..., CrawlContext]
+
+
+def resolve_to_public_address(host: str) -> list[str]:
+    return [PUBLIC_TEST_ADDRESS]
 
 
 def build_fake_request(line: str, parent_request: CrawlRequest) -> CrawlRequest:
@@ -85,6 +91,7 @@ def build_context(tmp_path: Path) -> Iterator[ContextBuilder]:
         requested_urls: list[str],
         timing_out_urls: frozenset[str] = frozenset(),
         redirect_locations_by_url: dict[str, str] | None = None,
+        resolve_host_addresses: Callable[[str], list[str]] = resolve_to_public_address,
     ) -> CrawlContext:
         client = build_mock_client(
             {**ROUTES_WITHOUT_ROBOTS, **routes_by_url}, requested_urls, timing_out_urls, redirect_locations_by_url
@@ -96,6 +103,7 @@ def build_context(tmp_path: Path) -> Iterator[ContextBuilder]:
             robots_policy=RobotsPolicy(client),
             pacer=HostPacer(min_seconds_between_requests=0.0),
             dataset_dir=tmp_path / "crawled",
+            resolve_host_addresses=resolve_host_addresses,
         )
         opened_contexts.append(context)
         return context
@@ -241,6 +249,44 @@ def test_redirected_image_is_saved_under_its_final_url(build_context: ContextBui
     run_crawl(context, max_requests=10)
 
     assert list_saved_source_urls(context) == [final_image_url]
+
+
+def test_request_to_a_private_address_is_skipped_without_fetching(build_context: ContextBuilder) -> None:
+    requested_urls: list[str] = []
+    intranet_image_url = "https://intranet.example/photo.jpg"
+
+    def resolve_intranet_to_private_address(host: str) -> list[str]:
+        return ["192.168.1.10"] if host == "intranet.example" else [PUBLIC_TEST_ADDRESS]
+
+    context = build_context(
+        {SEED_URL: page_route(f"download {intranet_image_url}"), intranet_image_url: image_route()},
+        requested_urls,
+        resolve_host_addresses=resolve_intranet_to_private_address,
+    )
+    enqueue_seed_page(context)
+
+    run_crawl(context, max_requests=10)
+
+    assert [url for url in requested_urls if "intranet.example" in url] == []
+    assert count_requests_by_status(context.connection, FAKE_SOURCE_NAME) == {"done": 1, "skipped": 1}
+
+
+def test_request_to_an_unresolvable_host_is_failed(build_context: ContextBuilder) -> None:
+    def fail_to_resolve_image_host(host: str) -> list[str]:
+        if host == "img.example":
+            raise socket.gaierror(f"cannot resolve {host}")
+        return [PUBLIC_TEST_ADDRESS]
+
+    context = build_context(
+        {SEED_URL: page_route(f"download {IMAGE_URL}"), IMAGE_URL: image_route()},
+        [],
+        resolve_host_addresses=fail_to_resolve_image_host,
+    )
+    enqueue_seed_page(context)
+
+    run_crawl(context, max_requests=10)
+
+    assert count_requests_by_status(context.connection, FAKE_SOURCE_NAME) == {"done": 1, "failed": 1}
 
 
 def test_image_smaller_than_the_minimum_is_skipped(build_context: ContextBuilder) -> None:
