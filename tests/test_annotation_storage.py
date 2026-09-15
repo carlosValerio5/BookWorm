@@ -98,7 +98,7 @@ def test_saved_annotation_is_readable_utf8_json_without_leftover_files(tmp_path:
 def test_valid_draft_has_no_problems() -> None:
     boxes = [
         build_labeled_box(BoxType.BOOK, text=""),
-        build_labeled_box(BoxType.BARCODE, text="9780306406157"),
+        build_labeled_box(BoxType.BARCODE, text=""),
         build_labeled_box(BoxType.PRINTED_ISBN, text="ISBN 978-0-306-40615-7"),
         build_labeled_box(BoxType.TITLE, text="El Buscón"),
         build_labeled_box(BoxType.AUTHOR, text="Quevedo"),
@@ -134,8 +134,8 @@ def test_valid_draft_has_no_problems() -> None:
             "box 0 (title) has no area",
         ),
         (
-            build_labeled_box(BoxType.BARCODE, text="4006381333931"),
-            "box 0 (barcode) text '4006381333931' is not an ISBN barcode",
+            build_labeled_box(BoxType.BARCODE, text="9780306406157"),
+            "box 0 (barcode) must not have text",
         ),
         (
             build_labeled_box(BoxType.PRINTED_ISBN, text="ISBN 123"),
@@ -159,5 +159,5 @@ def test_find_annotation_problems_reports_every_problem_with_its_box_index() -> 
 
     assert find_annotation_problems(build_draft(boxes)) == [
         "box 1 (barcode) is outside the 400x300 photo",
-        "box 1 (barcode) text '123' is not an ISBN barcode",
+        "box 1 (barcode) must not have text",
     ]
