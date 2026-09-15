@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import cv2
@@ -7,10 +8,12 @@ from fastapi.testclient import TestClient
 from image_factories import create_blank_image, write_heic_image, write_image
 
 from bookworm.annotator.web_app import create_annotator_app
+from bookworm.logging_setup import configure_logging
 
 PNG_PHOTO_PATH = "cover/blank.png"
 HEIC_PHOTO_PATH = "iphone.heic"
 VALID_BOX_JSON = {"x_min": 10, "y_min": 20, "x_max": 200, "y_max": 80}
+OUTSIDE_BOX_JSON = {"x_min": 10, "y_min": 20, "x_max": 500, "y_max": 80}
 
 
 @pytest.fixture
@@ -32,6 +35,13 @@ def client(photos_dir: Path, labels_dir: Path) -> TestClient:
     return TestClient(create_annotator_app(photos_dir, labels_dir))
 
 
+@pytest.fixture
+def log_file_path(tmp_path: Path) -> Path:
+    log_file_path = tmp_path / "annotator.jsonl"
+    configure_logging(log_file_path)
+    return log_file_path
+
+
 def build_draft_json(
     photo_path: str = PNG_PHOTO_PATH, box_type: str = "title", box: dict[str, int] = VALID_BOX_JSON
 ) -> dict[str, object]:
@@ -47,6 +57,10 @@ def build_draft_json(
 
 def decode_jpeg(jpeg_bytes: bytes) -> np.ndarray:
     return cv2.imdecode(np.frombuffer(jpeg_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
+
+
+def read_log_events(log_file_path: Path) -> list[dict]:
+    return [json.loads(line) for line in log_file_path.read_text(encoding="utf-8").splitlines()]
 
 
 def test_index_page_is_served(client: TestClient) -> None:
@@ -120,9 +134,7 @@ def test_saved_annotation_round_trips(client: TestClient, labels_dir: Path) -> N
 
 
 def test_invalid_annotation_returns_problems_and_writes_nothing(client: TestClient, labels_dir: Path) -> None:
-    outside_box = {"x_min": 10, "y_min": 20, "x_max": 500, "y_max": 80}
-
-    response = client.put("/api/annotation", json=build_draft_json(box=outside_box))
+    response = client.put("/api/annotation", json=build_draft_json(box=OUTSIDE_BOX_JSON))
 
     assert response.status_code == 422
     assert response.json() == {"problems": ["box 0 (title) is outside the 400x300 photo"]}
@@ -143,3 +155,43 @@ def test_save_rejects_path_outside_photos_folder(client: TestClient) -> None:
 
 def test_annotation_rejects_path_outside_photos_folder(client: TestClient) -> None:
     assert client.get("/api/annotation", params={"photo": "../secret.png"}).status_code == 400
+
+
+def test_expected_client_errors_log_one_warning_each_and_no_call_failed(client: TestClient, log_file_path: Path) -> None:
+    client.get("/api/annotation", params={"photo": PNG_PHOTO_PATH})
+    client.get("/api/image", params={"photo": "missing.png"})
+    client.put("/api/annotation", json=build_draft_json(box=OUTSIDE_BOX_JSON))
+    client.put("/api/annotation", json=build_draft_json(box_type="spine"))
+
+    events = read_log_events(log_file_path)
+    rejected_events = [event for event in events if event["event"] == "request_rejected"]
+    assert [event for event in events if event["event"] == "call_failed"] == []
+    assert [(event["level"], event["method"], event["path"], event["status_code"], event["error"]) for event in rejected_events] == [
+        ("warning", "GET", "/api/annotation", 404, "AnnotationNotFoundError"),
+        ("warning", "GET", "/api/image", 404, "PhotoNotFoundError"),
+        ("warning", "PUT", "/api/annotation", 422, "AnnotationProblemsError"),
+        ("warning", "PUT", "/api/annotation", 422, "RequestValidationError"),
+    ]
+
+
+def test_unreadable_photo_logs_call_failed(client: TestClient, photos_dir: Path, log_file_path: Path) -> None:
+    (photos_dir / "broken.jpg").write_bytes(b"not an image")
+
+    client.get("/api/image", params={"photo": "broken.jpg"})
+
+    failed_events = [event for event in read_log_events(log_file_path) if event["event"] == "call_failed"]
+    assert [(event["call"], event["level"]) for event in failed_events] == [
+        ("load_image", "error"),
+        ("get_photo_image", "error"),
+    ]
+
+
+def test_saving_logs_annotation_saved_with_labeling_duration(client: TestClient, log_file_path: Path) -> None:
+    client.put("/api/annotation", json=build_draft_json())
+
+    saved_events = [event for event in read_log_events(log_file_path) if event["event"] == "annotation_saved"]
+    assert len(saved_events) == 1
+    assert saved_events[0]["service"] == "bookworm.annotator.web_app"
+    assert saved_events[0]["kind"] == "cover"
+    assert saved_events[0]["box_type_counts"] == {"title": 1}
+    assert saved_events[0]["labeling_duration_ms"] == 41250
