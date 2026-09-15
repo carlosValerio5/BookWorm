@@ -3,12 +3,32 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import uvicorn
+from fastapi import FastAPI
 from image_factories import VALID_ISBN13, place_on_white_canvas, write_image
 from typer.testing import CliRunner
 
 from bookworm.cli import ImageWriteError, app, write_annotated_image
 
 runner = CliRunner()
+
+
+def test_annotator_rejects_missing_photos_folder(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["annotator", str(tmp_path / "missing")])
+
+    assert result.exit_code == 2
+
+
+def test_annotator_serves_app_on_localhost_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    uvicorn_calls: list[tuple[object, dict[str, object]]] = []
+    monkeypatch.setattr(uvicorn, "run", lambda served_app, **options: uvicorn_calls.append((served_app, options)))
+
+    result = runner.invoke(app, ["annotator", str(tmp_path), "--labels-dir", str(tmp_path / "labels"), "--port", "9000"])
+
+    assert result.exit_code == 0, result.output
+    served_app, options = uvicorn_calls[0]
+    assert isinstance(served_app, FastAPI)
+    assert options == {"host": "127.0.0.1", "port": 9000, "log_config": None}
 
 
 def test_scan_rejects_missing_image_path(tmp_path: Path) -> None:
