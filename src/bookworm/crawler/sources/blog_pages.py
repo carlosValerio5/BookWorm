@@ -9,8 +9,9 @@ from bookworm.crawler.html_extraction import extract_image_urls, extract_link_ur
 
 SOURCE_NAME = "blog_pages"
 BLOG_MIN_SECONDS_BETWEEN_REQUESTS = 2.0
-MIN_IMAGE_LONG_SIDE = 640
+MIN_IMAGE_LONG_SIDE = 600
 BLOCKED_IMAGE_HOST_SUFFIXES = ("pixel.wp.com", "gravatar.com", "cdninstagram.com", "netgalley.com")
+SPINE_IMAGE_URL = re.compile(r"spine", re.IGNORECASE)
 
 
 def build_seed_requests(seed_file: Path) -> list[CrawlRequest]:
@@ -44,10 +45,15 @@ def build_image_download_requests(page_request: CrawlRequest, html: str) -> list
             source_name=SOURCE_NAME,
             purpose=RequestPurpose.DOWNLOAD,
             depth=page_request.depth + 1,
-            labels={**page_request.labels, "page_url": page_request.url},
+            labels=build_image_labels(page_request, image_url),
         )
         for image_url in image_urls
     ]
+
+
+def build_image_labels(page_request: CrawlRequest, image_url: str) -> dict[str, str]:
+    expected_content = "spine" if SPINE_IMAGE_URL.search(image_url) else page_request.labels["expected_content"]
+    return {**page_request.labels, "page_url": page_request.url, "expected_content": expected_content}
 
 
 def is_blocked_image_host(image_url: str) -> bool:
