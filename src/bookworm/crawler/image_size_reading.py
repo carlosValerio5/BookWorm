@@ -1,5 +1,6 @@
-import cv2
-import numpy as np
+import io
+
+import imagesize
 
 
 class ImageDecodeError(Exception):
@@ -7,7 +8,7 @@ class ImageDecodeError(Exception):
 
 
 def read_image_long_side(image_bytes: bytes) -> int:
-    image = cv2.imdecode(np.frombuffer(image_bytes, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
-    if image is None:
-        raise ImageDecodeError(f"Could not decode {len(image_bytes)} bytes as an image")
-    return max(image.shape[:2])
+    width, height = imagesize.get(io.BytesIO(image_bytes))
+    if min(width, height) <= 0:
+        raise ImageDecodeError(f"Could not read image dimensions from {len(image_bytes)} bytes")
+    return max(width, height)

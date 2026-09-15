@@ -35,6 +35,7 @@ class FetchedResponse:
     status_code: int
     media_type: str
     body: bytes
+    redirect_url: str = ""
 
 
 @dataclass(frozen=True)

@@ -41,7 +41,7 @@ def fetch_robots_rules(client: httpx.Client, origin: str) -> RobotFileParser:
 
 def read_robots_rule_lines(client: httpx.Client, robots_url: str) -> list[str]:
     try:
-        response = client.get(robots_url)
+        response = client.get(robots_url, follow_redirects=True)
     except httpx.TransportError as error:
         logger.warning("robots_unreachable_disallowing_origin", robots_url=robots_url, error=repr(error))
         return DISALLOW_EVERYTHING_RULE_LINES

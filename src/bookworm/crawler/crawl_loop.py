@@ -1,7 +1,7 @@
 import sqlite3
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -27,7 +27,8 @@ from bookworm.logging_setup import log_call
 
 logger = structlog.stdlib.get_logger(__name__)
 
-RATE_LIMIT_STATUS_CODES = frozenset({401, 403, 429})
+RATE_LIMIT_STATUS_CODES = frozenset({429})
+MAX_IMAGE_LONG_SIDE = 16384
 
 
 class StopReason(StrEnum):
@@ -41,6 +42,10 @@ class RequestSkipped(Exception):
 
 
 class RequestFailed(Exception):
+    pass
+
+
+class RequestRedirected(Exception):
     pass
 
 
@@ -103,6 +108,9 @@ def handle_request(context: CrawlContext, request: CrawlRequest) -> int:
     except RequestSkipped as skip:
         mark_request_skipped(context.connection, request.url, str(skip))
         return 0
+    except RequestRedirected as redirect:
+        follow_redirect(context, request, str(redirect))
+        return 0
     except FAILURE_ERRORS as failure:
         mark_request_failed(context.connection, request.url, f"{type(failure).__name__}: {failure}")
         return 0
@@ -110,11 +118,17 @@ def handle_request(context: CrawlContext, request: CrawlRequest) -> int:
     return saved_file_count
 
 
+def follow_redirect(context: CrawlContext, request: CrawlRequest, redirect_url: str) -> None:
+    enqueue_requests(context.connection, [replace(request, url=redirect_url)])
+    mark_request_skipped(context.connection, request.url, f"redirected_to:{redirect_url}")
+
+
 def process_request(context: CrawlContext, request: CrawlRequest) -> int:
     ensure_allowed_by_robots(context.robots_policy, request)
     context.pacer.wait_for_host(urlsplit(request.url).netloc)
     response = fetch_request(context.client, request)
     ensure_not_rate_limited(response)
+    ensure_not_redirected(response)
     ensure_success_status(response)
     return RESPONSE_HANDLER_BY_PURPOSE[request.purpose](context, response)
 
@@ -127,6 +141,11 @@ def ensure_allowed_by_robots(robots_policy: RobotsPolicy, request: CrawlRequest)
 def ensure_not_rate_limited(response: FetchedResponse) -> None:
     if response.status_code in RATE_LIMIT_STATUS_CODES:
         raise RateLimited(f"http_{response.status_code}")
+
+
+def ensure_not_redirected(response: FetchedResponse) -> None:
+    if response.redirect_url:
+        raise RequestRedirected(response.redirect_url)
 
 
 def ensure_success_status(response: FetchedResponse) -> None:
@@ -154,7 +173,7 @@ def is_within_max_depth(source: CrawlSource, request: CrawlRequest) -> bool:
 
 def handle_download_response(context: CrawlContext, response: FetchedResponse) -> int:
     ensure_accepted_image_media_type(context.source, response)
-    ensure_min_image_long_side(context.source, response)
+    ensure_image_long_side_within_limits(context.source, response)
     saved_file = build_saved_file(context.dataset_dir, response)
     write_file_body(saved_file, response.body)
     is_new_file = record_saved_file(context.connection, saved_file)
@@ -167,10 +186,12 @@ def ensure_accepted_image_media_type(source: CrawlSource, response: FetchedRespo
         raise RequestFailed(f"unaccepted_media_type:{response.media_type}")
 
 
-def ensure_min_image_long_side(source: CrawlSource, response: FetchedResponse) -> None:
+def ensure_image_long_side_within_limits(source: CrawlSource, response: FetchedResponse) -> None:
     image_long_side = read_image_long_side(response.body)
     if image_long_side < source.min_image_long_side:
         raise RequestSkipped(f"image_too_small:{image_long_side}px")
+    if image_long_side > MAX_IMAGE_LONG_SIDE:
+        raise RequestSkipped(f"image_too_large:{image_long_side}px")
 
 
 RESPONSE_HANDLER_BY_PURPOSE: dict[RequestPurpose, Callable[[CrawlContext, FetchedResponse], int]] = {
