@@ -1,0 +1,43 @@
+[project]
+name = "bookworm"
+version = "0.1.0"
+description = "Scan a book cover or ISBN barcode and tell which one you're looking at."
+readme = "README.md"
+authors = [
+    { name = "carlosValerio5", email = "carlosvaleriocs@outlook.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "easyocr>=1.7.2",
+    "structlog>=26.1.0",
+    "typer>=0.27.2",
+    "ultralytics>=8.4.152",
+    "zxing-cpp>=3.1.1",
+]
+
+[project.scripts]
+bookworm = "bookworm.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = [
+    "slow: loads YOLO or EasyOCR models, downloads weights on first run",
+]
+
+[tool.coverage.run]
+source = ["bookworm"]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
