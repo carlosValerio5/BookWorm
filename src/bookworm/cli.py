@@ -7,8 +7,10 @@ import cv2
 import numpy as np
 import structlog
 import typer
+import uvicorn
 
 from bookworm.annotation_drawing import draw_scan_result
+from bookworm.annotator.web_app import create_annotator_app
 from bookworm.book_detection import load_book_detector
 from bookworm.image_loading import load_image
 from bookworm.logging_setup import configure_logging, log_call
@@ -21,6 +23,11 @@ logger = structlog.stdlib.get_logger(__name__)
 app = typer.Typer(no_args_is_help=True, help="Scan a book photo and tell if it shows a cover or an ISBN.")
 
 ExistingImagePath = Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)]
+ExistingDirectoryPath = Annotated[Path, typer.Argument(exists=True, file_okay=False, readable=True)]
+
+ANNOTATOR_HOST = "127.0.0.1"
+DEFAULT_ANNOTATOR_PORT = 8765
+DEFAULT_LABELS_DIRECTORY = Path("labels")
 
 
 class ImageWriteError(Exception):
@@ -40,6 +47,22 @@ def annotate(image_path: ExistingImagePath, output_path: Path) -> None:
     scan_result = scan_image(image_path, load_book_detector(), load_text_reader())
     write_annotated_image(output_path, draw_scan_result(load_image(image_path), scan_result))
     typer.echo(format_scan_result_as_json(scan_result))
+
+
+@app.command()
+def annotator(
+    photos_dir: ExistingDirectoryPath,
+    labels_dir: Annotated[Path, typer.Option(help="Folder where labels are saved.")] = DEFAULT_LABELS_DIRECTORY,
+    port: Annotated[int, typer.Option(help="Port for the local web app.")] = DEFAULT_ANNOTATOR_PORT,
+) -> None:
+    """Open the local web app for labeling book photos by hand."""
+    logger.info(
+        "annotator_starting",
+        photos_dir=str(photos_dir),
+        labels_dir=str(labels_dir),
+        url=f"http://{ANNOTATOR_HOST}:{port}",
+    )
+    uvicorn.run(create_annotator_app(photos_dir, labels_dir), host=ANNOTATOR_HOST, port=port, log_config=None)
 
 
 def write_annotated_image(output_path: Path, annotated_image: np.ndarray) -> None:

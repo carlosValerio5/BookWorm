@@ -6,6 +6,14 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 
 ## [Unreleased]
 
+### Added
+- `bookworm annotator PHOTOS_DIR` opens a local web app at `http://127.0.0.1:8765` for labeling book photos by hand. You pick the class first, then draw boxes typed as `book`, `barcode`, `printed_isbn`, `title`, `author`, `publisher` or `other_text` and type the text inside each text box. Barcode boxes have no text. Every photo gets one JSON label in `labels/` with boxes in the original photo's pixels (Book Annotator PRD, milestone 1).
+
+### Changed
+- Terminal logs are readable `event key=value` lines, colored in a real terminal. `logs/bookworm.jsonl` still gets every event as JSON.
+- The annotator is redesigned in the style of Cursor's website: a warm dark window with the photo path in the title bar, a larger photo, photos grouped into "To label" and "Labeled" with box counts, a status bar with mode, box type, cursor pixels and a labeling timer, and box tags that avoid covering other boxes. Keyboard shortcuts and the class-first lock are unchanged.
+- `/api/photos` returns each photo's `box_count`.
+
 ## [0.1.0] - 2026-09-15
 
 ### Added

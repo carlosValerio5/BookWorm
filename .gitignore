@@ -9,8 +9,14 @@ wheels/
 # Virtual environments
 .venv
 
-# Real photos stay local
+# Real photos and their labels stay local
 dataset/
+labels/
+.impeccable/review/
+
+# Impeccable design tool runtime files
+.impeccable/hook.cache.json
+.impeccable/questions/
 
 # Runtime output
 logs/
