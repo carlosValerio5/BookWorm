@@ -148,3 +148,60 @@ Photos checked by eye:
 - D34 resolved: `Book sales` removed from `crawler_seeds/commons_categories.toml`.
 - Local queue: 6 pending requests marked `skipped` (1 `dropped_by_user:book_sales`, 5 `png_not_collected`).
 - Already saved and not deleted: 10 `Book sales` photos, 4 ISBN `.png` files.
+- Later the same day, at the user's request, those 14 files and their `saved_files` rows were deleted (verified: 0 files, 0 rows left).
+
+---
+
+# H1, M1–M3: PR #4 review fixes (2026-09-15)
+
+**Source**: `.claude/reviews/pr-4-review.md`. Two cycles, so each RED fails for its own reason (M3 changes `CrawlContext`, which would have broken every loop test and hidden the H1/M1/M2 failures).
+**Checkpoints**: cycle A (H1, M1, M2) RED `ac6d8a9`, GREEN `7af64dc`; cycle B (M3) RED `727719d`, GREEN `74af5d4`.
+
+## User journeys
+- As a dataset builder, one photo that always returns 403 doesn't stop a source from collecting.
+- As a site owner, a redirect to my host still goes through my robots.txt.
+- As the person running the crawler, a huge file or an image bomb can't exhaust memory, and a web page can't make the crawler hit my local network.
+
+## Design
+- H1: only 429 stops a run; 401 and 403 mark the request `failed`.
+- M1: the client doesn't follow redirects. A 3xx with `Location` marks the request `skipped` (`redirected_to:<url>`) and queues the target with the same purpose and labels. Loops end because each URL is queued once. robots.txt fetches still follow redirects.
+- M2: bodies are streamed and stop at 30 MB (`FetchError`). Image size comes from the header (`imagesize`), so pixels are never decoded; images over 16384px are skipped (`image_too_large`).
+- M3: the host is resolved first, through `CrawlContext.resolve_host_addresses`. Any non-global address → `skipped` (`non_public_address:<host>`); resolution error → `failed` (`host_not_resolved:<host>`). Tests inject a fake resolver, so they never use DNS.
+
+## RED / GREEN
+- Cycle A RED: `7 failed, 181 passed`:
+  - `(0, rate_limited) != (1, queue_empty)`.
+  - `forbidden.example/photo.jpg` fetched after a 302.
+  - Saved `source_url` was `haul.jpg`, expected `final.jpg`.
+  - `FetchedResponse` has no `redirect_url`.
+  - `fetch_request()` has no `max_response_bytes`.
+  - A 60000px PNG header raised `ImageDecodeError` (failed, not skipped).
+- Guard: `test_redirected_robots_file_is_followed` passed before the change and still passes after.
+- Cycle A GREEN: **188 passed**.
+- Cycle B RED (compile-time): `23 failed, 167 passed, 1 error`:
+  - `ModuleNotFoundError: bookworm.crawler.address_policy`.
+  - `CrawlContext` has no `resolve_host_addresses` (x20).
+  - `crawl_cli` has no `resolve_host_addresses` (x3).
+- Cycle B GREEN: `uv run pytest -q -m "not slow" -W error::ResourceWarning --cov=bookworm.crawler` → **198 passed**, 99% (`address_policy.py`, `crawl_loop.py`, `http_fetching.py`, `image_size_reading.py`, `robots_policy.py` all 100%).
+
+## Real run after the fixes
+`bookworm-crawl run blog_pages --max-requests 10` → `10 handled, 9 saved, budget_reached`; 1 skipped `image_too_small:400px`.
+
+## Test specification (new)
+| # | Guarantee | Test | Type | Result |
+|---|---|---|---|---|
+| 34 | A 403 download is failed and the next image is still saved | `test_forbidden_download_is_failed_and_the_run_continues` | integration | PASS |
+| 35 | A redirect to a host whose robots.txt disallows us is never fetched | `test_redirect_to_a_host_that_disallows_us_is_never_fetched` | integration | PASS |
+| 36 | A redirected image is saved under its final URL | `test_redirected_image_is_saved_under_its_final_url` | integration | PASS |
+| 37 | The client keeps 3xx unfollowed and reports the absolute `Location` | `test_fetch_keeps_redirects_unfollowed_with_their_absolute_location` | unit | PASS |
+| 38 | robots.txt behind a redirect is still read | `test_redirected_robots_file_is_followed` | unit | PASS |
+| 39 | A body over the byte limit raises `FetchError` | `test_fetch_raises_fetch_error_when_the_body_is_larger_than_the_limit` | unit | PASS |
+| 40 | Image size is read from the header without decoding pixels | `test_reads_long_side_from_the_header_without_decoding_pixels` | unit | PASS |
+| 41 | Images over 16384px are skipped | `test_image_larger_than_the_maximum_is_skipped` | integration | PASS |
+| 42 | Loopback, private, link-local and scoped IPv6 addresses are not public; a global one is; an IP literal resolves to itself once | `test_address_policy.py` (8) | unit | PASS |
+| 43 | A host resolving to a private address is skipped, and nothing on it is requested (robots.txt included) | `test_request_to_a_private_address_is_skipped_without_fetching` | integration | PASS |
+| 44 | A host that doesn't resolve is failed | `test_request_to_an_unresolvable_host_is_failed` | integration | PASS |
+
+## Known gaps (new)
+- DNS rebinding: the host is resolved by our check and again by `httpx`; a host could answer differently the second time.
+- Review findings L1–L7 are still open.

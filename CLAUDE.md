@@ -77,4 +77,6 @@ Here you'll record any issues we find along the way, this is how we keep improvi
 - T11 (2026-09-15): Openverse API answers can take 30s+. A 30s client timeout fails; the crawler uses 90s.
 - T12 (2026-09-15): Python 3.13 warns `ResourceWarning: unclosed database` for SQLite connections left open. `with connection:` only commits; close with `contextlib.closing`.
 - T13 (2026-09-15): `commons.wikimedia.org/robots.txt` disallows `/w/` (so `api.php`) and `/api/` for every agent, and Wikimedia's Robot policy says to honor robots.txt. A robots-respecting crawler must use `/wiki/Category:` and `/wiki/File:` HTML pages; originals on `upload.wikimedia.org` are allowed. Category pagination links point to `/w/index.php`, so only the first 200 files of each category are reachable.
+- T14 (2026-09-15): `httpx` with `follow_redirects=True` fetches the redirect target without a robots.txt check for its host. The crawler client doesn't follow redirects; the loop queues the `Location` as a new request. robots.txt itself is still fetched with redirects on.
+- T15 (2026-09-15): Treating 401/403 as "rate limited" (stop the run, keep the request pending) plus taking pending downloads first means one permanently forbidden URL blocks the source forever. Only 429 stops a run.
 

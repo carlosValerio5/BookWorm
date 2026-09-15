@@ -13,6 +13,7 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 - `commons_categories` source: Wikimedia Commons category pages from `crawler_seeds/commons_categories.toml`. Downloads the largest standard thumbnail of at least 640px, keeps the license, and skips PNGs.
 - `openverse_photos` source. It collects nothing today, because Openverse's robots.txt blocks its image API (D17).
 - Every saved photo carries a hint label (`cover`, `isbn` or `spine`) and where it came from.
+- Crawler safety limits: a 401 or 403 fails that one request instead of stopping the run; redirects are queued as new requests, so the target's robots.txt is checked and the photo is saved under its final URL; responses stop at 30 MB; image size is read from the file header, and images over 16384px are skipped; hosts that resolve to loopback, private or link-local addresses are skipped.
 
 ## [0.1.0] - 2026-09-15
 
