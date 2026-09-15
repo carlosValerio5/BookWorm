@@ -83,12 +83,12 @@ def test_lists_photos_with_annotated_flag(client: TestClient) -> None:
     after_saving = client.get("/api/photos").json()
 
     assert before_saving == [
-        {"photo_path": PNG_PHOTO_PATH, "annotated": False},
-        {"photo_path": HEIC_PHOTO_PATH, "annotated": False},
+        {"photo_path": PNG_PHOTO_PATH, "annotated": False, "box_count": 0},
+        {"photo_path": HEIC_PHOTO_PATH, "annotated": False, "box_count": 0},
     ]
     assert after_saving == [
-        {"photo_path": PNG_PHOTO_PATH, "annotated": True},
-        {"photo_path": HEIC_PHOTO_PATH, "annotated": False},
+        {"photo_path": PNG_PHOTO_PATH, "annotated": True, "box_count": 1},
+        {"photo_path": HEIC_PHOTO_PATH, "annotated": False, "box_count": 0},
     ]
 
 
