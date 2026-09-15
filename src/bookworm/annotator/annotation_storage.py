@@ -107,6 +107,19 @@ def find_annotation_file(labels_dir: Path, photo_path: str) -> Path:
     return annotation_path
 
 
+def count_saved_boxes(labels_dir: Path, photo_path: str) -> int:
+    annotation_path = annotation_path_for(labels_dir, photo_path)
+    return len(load_annotation(annotation_path).boxes) if annotation_path.is_file() else 0
+
+
+def describe_photo(labels_dir: Path, photo_path: str) -> dict[str, str | bool | int]:
+    return {
+        "photo_path": photo_path,
+        "annotated": annotation_path_for(labels_dir, photo_path).is_file(),
+        "box_count": count_saved_boxes(labels_dir, photo_path),
+    }
+
+
 def build_photo_annotation(draft: AnnotationDraft, saved_at_utc: datetime) -> PhotoAnnotation:
     return PhotoAnnotation(
         schema_version=ANNOTATION_SCHEMA_VERSION,

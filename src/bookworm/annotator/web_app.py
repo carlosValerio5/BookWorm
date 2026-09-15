@@ -17,8 +17,8 @@ from bookworm.annotator.annotation_storage import (
     AnnotationProblemsError,
     PhotoNotFoundError,
     PhotoPathError,
-    annotation_path_for,
     build_photo_annotation,
+    describe_photo,
     find_annotation_file,
     find_annotation_problems,
     find_photo_file,
@@ -52,12 +52,9 @@ def create_annotator_app(photos_dir: Path, labels_dir: Path) -> FastAPI:
         return FileResponse(STATIC_DIRECTORY / "index.html")
 
     @app.get("/api/photos")
-    def list_photos() -> list[dict[str, str | bool]]:
+    def list_photos() -> list[dict[str, str | bool | int]]:
         with log_call(logger, "list_photos", photos_dir=str(photos_dir), labels_dir=str(labels_dir)):
-            return [
-                {"photo_path": photo_path, "annotated": annotation_path_for(labels_dir, photo_path).is_file()}
-                for photo_path in list_photo_paths(photos_dir)
-            ]
+            return [describe_photo(labels_dir, photo_path) for photo_path in list_photo_paths(photos_dir)]
 
     @app.get("/api/image")
     def get_photo_image(photo: str) -> Response:
