@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 import structlog
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
@@ -59,21 +61,21 @@ def create_annotator_app(photos_dir: Path, labels_dir: Path) -> FastAPI:
 
     @app.get("/api/image")
     def get_photo_image(photo: str) -> Response:
+        photo_file = find_photo_file(photos_dir, photo)
         with log_call(logger, "get_photo_image", photo_path=photo):
-            jpeg_bytes = encode_jpeg(load_image(find_photo_file(photos_dir, photo)))
+            jpeg_bytes = encode_jpeg(load_image(photo_file))
         return Response(content=jpeg_bytes, media_type="image/jpeg")
 
     @app.get("/api/annotation")
     def get_photo_annotation(photo: str) -> PhotoAnnotation:
-        with log_call(logger, "get_photo_annotation", photo_path=photo):
-            resolve_photo_path(photos_dir, photo)
-            return load_annotation(find_annotation_file(labels_dir, photo))
+        resolve_photo_path(photos_dir, photo)
+        return load_annotation(find_annotation_file(labels_dir, photo))
 
     @app.put("/api/annotation")
     def save_photo_annotation(draft: AnnotationDraft) -> PhotoAnnotation:
+        find_photo_file(photos_dir, draft.photo_path)
+        raise_for_annotation_problems(find_annotation_problems(draft))
         with log_call(logger, "save_photo_annotation", photo_path=draft.photo_path):
-            find_photo_file(photos_dir, draft.photo_path)
-            raise_for_annotation_problems(find_annotation_problems(draft))
             annotation = build_photo_annotation(draft, datetime.now(UTC))
             save_annotation(labels_dir, annotation)
             logger.info(
@@ -106,14 +108,34 @@ def add_error_responses(app: FastAPI) -> None:
     app.add_exception_handler(AnnotationNotFoundError, build_detail_response_handler(404))
     app.add_exception_handler(ImageLoadError, build_detail_response_handler(422))
     app.add_exception_handler(AnnotationProblemsError, respond_with_annotation_problems)
+    app.add_exception_handler(RequestValidationError, respond_with_request_validation_errors)
+
+
+def log_rejected_request(request: Request, status_code: int, error: Exception) -> None:
+    logger.warning(
+        "request_rejected",
+        method=request.method,
+        path=request.url.path,
+        query=request.url.query,
+        status_code=status_code,
+        error=type(error).__name__,
+        detail=str(error),
+    )
 
 
 def build_detail_response_handler(status_code: int) -> Callable[[Request, Exception], JSONResponse]:
-    def respond_with_detail(_request: Request, error: Exception) -> JSONResponse:
+    def respond_with_detail(request: Request, error: Exception) -> JSONResponse:
+        log_rejected_request(request, status_code, error)
         return JSONResponse(status_code=status_code, content={"detail": str(error)})
 
     return respond_with_detail
 
 
-def respond_with_annotation_problems(_request: Request, error: AnnotationProblemsError) -> JSONResponse:
+def respond_with_annotation_problems(request: Request, error: AnnotationProblemsError) -> JSONResponse:
+    log_rejected_request(request, 422, error)
     return JSONResponse(status_code=422, content={"problems": error.problems})
+
+
+async def respond_with_request_validation_errors(request: Request, error: RequestValidationError) -> Response:
+    log_rejected_request(request, 422, error)
+    return await request_validation_exception_handler(request, error)
