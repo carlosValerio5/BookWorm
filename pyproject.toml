@@ -10,7 +10,10 @@ requires-python = ">=3.13"
 dependencies = [
     "easyocr>=1.7.2",
     "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    "imagesize>=2.0.1",
     "pillow-heif>=1.7.0",
+    "selectolax>=0.4.11",
     "structlog>=26.1.0",
     "typer>=0.27.2",
     "ultralytics>=8.4.152",
@@ -20,6 +23,7 @@ dependencies = [
 
 [project.scripts]
 bookworm = "bookworm.cli:main"
+bookworm-crawl = "bookworm.crawler.crawl_cli:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]

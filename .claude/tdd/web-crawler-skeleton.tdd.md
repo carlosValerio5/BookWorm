@@ -1,0 +1,207 @@
+# TDD Evidence: Deterministic web crawler skeleton (F1–F7)
+
+**Source**: Plan v2 in conversation (2026-09-15). No `.plan.md` file. eBay skipped by user decision.
+**Branch**: `worktree-feat+web-crawler`. RED `31bc24d`, GREEN `97ad1bc`, refactor `423b3f3`.
+
+## User journeys
+- As a dataset builder, I run `bookworm-crawl run` a little at a time and each run continues where the last one stopped.
+- As a site owner, the crawler names itself, obeys robots.txt, spaces out requests per host, and stops when I rate-limit it.
+- As a YOLO trainer, every saved photo carries a hint label (`expected_content`), its license and where it came from.
+
+## Probe before writing tests (F0)
+| # | Finding |
+|---|---|
+| D6 | Openverse anonymous: 20 requests/min, 200/day, `page_size` max 20, 240 results per query (`page_count` 12) |
+| D7 | `book cover`, `thrift books`, `isbn` hit the 240 cap; `book barcode` returns 0 |
+| D10 | One Openverse call took 33s; a 30s client timeout failed |
+| D11 | Blog images live on other hosts (`i0.wp.com`, `*.files.wordpress.com`, Squarespace CDN) |
+| D12 | Many `<img>` are 40×40 avatars, banners or `pixel.wp.com` trackers |
+| D13 | One Openverse response was not JSON |
+| D14 | Openverse results carry a `mature` flag |
+| D15 | WordPress `<img>` has `data-orig-file` (full-size original) |
+| D16 | Blog category pages paginate (`/page/2/`); not followed yet |
+
+**Design changes from the plan, based on the probe:**
+- No host allowlist in the core. Each source decides what to enqueue; blogs block tracker and avatar hosts by suffix.
+- Image size is checked on the downloaded bytes. Openverse also pre-filters on its `width`/`height` metadata.
+- HTTP timeout is 90s.
+
+## RED
+`uv run pytest -q -m "not slow" --continue-on-collection-errors`
+```
+E   ModuleNotFoundError: No module named 'bookworm.crawler'   (x11)
+70 passed, 11 deselected, 11 errors
+```
+
+## GREEN
+`uv run pytest -q -m "not slow"` → **140 passed, 11 deselected** (70 new crawler tests).
+
+## Refactor
+B1: the CLI and tests never closed SQLite connections (29 `ResourceWarning: unclosed database`).
+CLI now uses `contextlib.closing` and `with client`; tests close through fixtures.
+`uv run pytest -q -m "not slow" -W error::ResourceWarning` → **140 passed**.
+
+## Coverage
+`uv run pytest -q -m "not slow" --cov=bookworm.crawler --cov-report=term-missing` → **99%**. Only `crawl_cli.main()` (2 lines) is uncovered.
+
+## Real run (F8)
+`BOOKWORM_CRAWLER_CONTACT=https://github.com/carlosValerio5/BookWorm uv run bookworm-crawl run openverse_photos --seed-file crawler_seeds/openverse_queries.toml --max-requests 50`
+```
+{"requests_handled": 9, "files_saved": 0, "stop_reason": "queue_empty"}
+parse|skipped|disallowed_by_robots|9
+```
+**D17:** `api.openverse.org/robots.txt` has `Disallow: /v1/images/` for every agent and blocks AI crawlers (`GPTBot`, `CCBot`, `anthropic-ai`, `cohere-ai`) entirely. The crawler behaved correctly; the Openverse source collects nothing while robots.txt is obeyed. Decision pending with the user.
+
+Blog run not done: `crawler_seeds/blog_pages.toml` is a draft waiting for approval.
+
+## Test specification
+| # | Guarantee | Test | Type | Result |
+|---|---|---|---|---|
+| 1 | The same URL is queued once, across runs | `test_enqueue_keeps_one_row_per_url` | unit | PASS |
+| 2 | Requests come out in insertion order (deterministic) | `test_next_pending_request_follows_insertion_order` | unit | PASS |
+| 3 | Queue and labels survive closing and reopening the state file | `test_queue_survives_reopening_the_state_file`, `test_request_keeps_purpose_depth_and_labels` | unit | PASS |
+| 4 | `--retry-failed` puts failed requests back in the queue | `test_reset_failed_requests_makes_them_pending_again`, `test_retry_failed_downloads_what_failed_before` | unit, integration | PASS |
+| 5 | Same image content is stored once | `test_record_saved_file_returns_false_for_content_already_saved`, `test_same_image_at_two_urls_is_saved_once` | unit, integration | PASS |
+| 6 | Each host waits its own gap; the first request never waits | `test_request_pacing.py` (4) | unit | PASS |
+| 7 | robots.txt: disallowed paths blocked; 4xx allows all; 5xx or unreachable blocks all; fetched once per host | `test_robots_policy.py` (6) | unit | PASS |
+| 8 | Fetch strips charset, returns error statuses, raises `FetchError` on timeout, sends the User-Agent | `test_http_fetching.py` (4) | unit | PASS |
+| 9 | Image long side is read from bytes; non-images raise `ImageDecodeError` | `test_image_size_reading.py` (3) | unit | PASS |
+| 10 | HTML: absolute URLs, `data-orig-file` > widest `srcset` > `src`, no `data:`/`mailto:`, no duplicates | `test_html_extraction.py` (6) | unit | PASS |
+| 11 | Openverse: stable search URL, one download per result with license labels, next page at same depth, stops at last page | `test_openverse_photos.py` | unit | PASS |
+| 12 | Openverse: skips mature and known-small results, keeps unknown size, non-JSON raises `ExtractionError` | `test_openverse_photos.py` | unit | PASS |
+| 13 | Blogs: images labeled with seed and page URL; tracker hosts dropped; only same-host links matching the pattern are followed | `test_blog_pages.py` (5) | unit | PASS |
+| 14 | Parse → download saves the file as `<sha256>.<ext>` with labels | `test_parse_then_download_saves_the_image_with_its_labels`, `test_saved_image_is_named_by_its_content_hash` | integration | PASS |
+| 15 | A second run fetches nothing already done | `test_second_run_fetches_nothing_already_done` | integration | PASS |
+| 16 | Budget stops the run; 429 stops the run and keeps the request pending | `test_run_stops_when_the_request_budget_is_reached`, `test_rate_limited_response_stops_the_run_and_keeps_the_request_pending` | integration | PASS |
+| 17 | Robots-disallowed URLs are never fetched | `test_request_disallowed_by_robots_is_skipped_without_fetching` | integration | PASS |
+| 18 | Small images skipped; 404, wrong media type, timeout, bad page all marked failed | `test_crawl_loop.py` (5) | integration | PASS |
+| 19 | Parse requests deeper than `max_depth` are never queued | `test_parse_requests_deeper_than_max_depth_are_not_queued` | integration | PASS |
+| 20 | Fetch log events carry `url`, `source_name` and one `crawl_run_id` | `test_fetch_events_carry_crawl_run_id_source_and_url` | integration | PASS |
+| 21 | CLI rejects unknown sources and a missing contact; `run` prints the summary; `status` prints counts | `test_crawl_cli.py` (5) | e2e (mocked HTTP) | PASS |
+| 22 | Committed seed files parse, use only `cover`/`isbn`, blog patterns compile | `test_seed_files.py` (4) | unit | PASS |
+
+## Known gaps
+- B2: requests skipped by robots stay `skipped`; there is no command to re-check them.
+- Blog pagination (D16) is not followed.
+- No perceptual-hash dedupe; the same photo at two sizes is saved twice.
+- `bookworm-crawl status` also prints JSON log lines on stderr; stdout stays clean JSON.
+
+---
+
+# F9–F11 + B3: Commons source, 600px blog minimum, spine label (2026-09-15)
+
+**Checkpoints**: RED `0593dc8`, GREEN `8ffd8bf`; B3 RED `9a83042`, GREEN `44218c0`.
+
+## Probe (F0)
+| # | Finding |
+|---|---|
+| D20 | Commons `robots.txt` disallows `/w/` (API) and `/api/`; Robot policy says honor robots.txt |
+| D28 | Category pagination links are `/w/index.php?...`, disallowed; only the first 200 files per category |
+| D29 | Each file is linked twice on a category page (399 links, 200 unique) |
+| D30 | Extensions mix case (`.JPG`) and include `.ogg` |
+| D31 | File pages list standard thumbnails (`.mw-thumbnail-link`: 330, 1280, 3840) |
+
+**Design:** category page → photo file pages only (`.jpg/.jpeg/.png/.webp`) → largest standard thumbnail ≥ 640px, else original; query string removed; `license` label from `.licensetpl_short`. No pagination, no subcategories.
+
+## RED / GREEN
+- RED: `4 failed, 139 passed, 1 error` (`ModuleNotFoundError: bookworm.crawler.sources.commons_categories`, `640 == 600`, `'cover' == 'spine'`, `commons_categories` not registered).
+- GREEN: `uv run pytest -q -m "not slow" -W error::ResourceWarning --cov=bookworm.crawler` → **153 passed**, 99%, `commons_categories.py` 100%.
+
+## B3: downloads waited behind pages
+First real Commons run: `50 handled, 0 saved`. The queue was strictly FIFO, so 46 downloads sat behind 221 file pages.
+Fix: `find_next_pending_request` orders by `purpose = 'download' DESC, queue_position` (still deterministic).
+- RED: `AssertionError: 'https://blog.example/page-2' == 'https://img.example/photo.jpg'`.
+- GREEN: **154 passed**.
+
+## Real runs
+| Run | Result |
+|---|---|
+| `blog_pages`, 50 requests (before F10) | 19 saved (6.2 MB), 21 skipped too small (six at 600px) |
+| `commons_categories`, 50 requests (before B3) | 0 saved |
+| `commons_categories`, 50 requests (after B3) | **32 saved** (22 `isbn`, 10 `cover`, 29 MB), 16 skipped < 640px, 219 file pages pending |
+
+Photos checked by eye:
+- `ISBN`: real photos of barcodes and ISBN text on book backs; one diagram slipped in (`ISBN_Details-ar.png`). **D33**
+- `Book sales`: wide scenes (a 1974 crowd, a warehouse of book stacks), not covers. **D34**
+
+## Test specification (new)
+| # | Guarantee | Test | Type | Result |
+|---|---|---|---|---|
+| 23 | Category URL uses underscores | `test_category_url_uses_underscores` | unit | PASS |
+| 24 | Seeds parse each category with its hint label | `test_seed_requests_parse_each_category_page` | unit | PASS |
+| 25 | Category page queues each photo file page once; no pagination, subcategories or footer links | `test_category_page_queues_each_photo_file_page_once` | unit | PASS |
+| 26 | Non-photo files (svg, ogg, pdf) are not queued | `test_category_page_skips_files_that_are_not_photos` | unit | PASS |
+| 27 | Largest thumbnail ≥ 640px, query removed, license stripped | `test_file_page_downloads_the_largest_thumbnail_with_its_license` | unit | PASS |
+| 28 | Original is used when thumbnails are too small | `test_file_page_downloads_the_original_when_thumbnails_are_too_small` | unit | PASS |
+| 29 | Missing license → empty label; missing original → `ExtractionError`; unknown page → `ExtractionError` | `test_commons_categories.py` (4) | unit | PASS |
+| 30 | Blog minimum is 600px | `test_blog_source_keeps_images_from_600px` | unit | PASS |
+| 31 | Blog images with "spine" in the URL get `expected_content = spine` | `test_extract_labels_images_named_spine_as_spine` | unit | PASS |
+| 32 | Committed seeds use only `cover`/`isbn`/`spine`; every source has a seed file | `test_seed_files.py` | unit | PASS |
+| 33 | Pending downloads are taken before pages queued earlier | `test_downloads_are_taken_before_pages_queued_earlier` | unit | PASS |
+
+## Known gaps (new)
+- 3840px thumbnails are ~1 MB each; kept on purpose (T8: barcodes stop decoding at 1280px).
+- Photos saved before F11 keep their old labels.
+
+## User decisions (2026-09-15)
+- D33 resolved: Commons skips `.png` files. RED `1a22935` (`ISBN_Details-ar.png` still queued), GREEN: **154 passed**.
+- D34 resolved: `Book sales` removed from `crawler_seeds/commons_categories.toml`.
+- Local queue: 6 pending requests marked `skipped` (1 `dropped_by_user:book_sales`, 5 `png_not_collected`).
+- Already saved and not deleted: 10 `Book sales` photos, 4 ISBN `.png` files.
+- Later the same day, at the user's request, those 14 files and their `saved_files` rows were deleted (verified: 0 files, 0 rows left).
+
+---
+
+# H1, M1–M3: PR #4 review fixes (2026-09-15)
+
+**Source**: `.claude/reviews/pr-4-review.md`. Two cycles, so each RED fails for its own reason (M3 changes `CrawlContext`, which would have broken every loop test and hidden the H1/M1/M2 failures).
+**Checkpoints**: cycle A (H1, M1, M2) RED `ac6d8a9`, GREEN `7af64dc`; cycle B (M3) RED `727719d`, GREEN `74af5d4`.
+
+## User journeys
+- As a dataset builder, one photo that always returns 403 doesn't stop a source from collecting.
+- As a site owner, a redirect to my host still goes through my robots.txt.
+- As the person running the crawler, a huge file or an image bomb can't exhaust memory, and a web page can't make the crawler hit my local network.
+
+## Design
+- H1: only 429 stops a run; 401 and 403 mark the request `failed`.
+- M1: the client doesn't follow redirects. A 3xx with `Location` marks the request `skipped` (`redirected_to:<url>`) and queues the target with the same purpose and labels. Loops end because each URL is queued once. robots.txt fetches still follow redirects.
+- M2: bodies are streamed and stop at 30 MB (`FetchError`). Image size comes from the header (`imagesize`), so pixels are never decoded; images over 16384px are skipped (`image_too_large`).
+- M3: the host is resolved first, through `CrawlContext.resolve_host_addresses`. Any non-global address → `skipped` (`non_public_address:<host>`); resolution error → `failed` (`host_not_resolved:<host>`). Tests inject a fake resolver, so they never use DNS.
+
+## RED / GREEN
+- Cycle A RED: `7 failed, 181 passed`:
+  - `(0, rate_limited) != (1, queue_empty)`.
+  - `forbidden.example/photo.jpg` fetched after a 302.
+  - Saved `source_url` was `haul.jpg`, expected `final.jpg`.
+  - `FetchedResponse` has no `redirect_url`.
+  - `fetch_request()` has no `max_response_bytes`.
+  - A 60000px PNG header raised `ImageDecodeError` (failed, not skipped).
+- Guard: `test_redirected_robots_file_is_followed` passed before the change and still passes after.
+- Cycle A GREEN: **188 passed**.
+- Cycle B RED (compile-time): `23 failed, 167 passed, 1 error`:
+  - `ModuleNotFoundError: bookworm.crawler.address_policy`.
+  - `CrawlContext` has no `resolve_host_addresses` (x20).
+  - `crawl_cli` has no `resolve_host_addresses` (x3).
+- Cycle B GREEN: `uv run pytest -q -m "not slow" -W error::ResourceWarning --cov=bookworm.crawler` → **198 passed**, 99% (`address_policy.py`, `crawl_loop.py`, `http_fetching.py`, `image_size_reading.py`, `robots_policy.py` all 100%).
+
+## Real run after the fixes
+`bookworm-crawl run blog_pages --max-requests 10` → `10 handled, 9 saved, budget_reached`; 1 skipped `image_too_small:400px`.
+
+## Test specification (new)
+| # | Guarantee | Test | Type | Result |
+|---|---|---|---|---|
+| 34 | A 403 download is failed and the next image is still saved | `test_forbidden_download_is_failed_and_the_run_continues` | integration | PASS |
+| 35 | A redirect to a host whose robots.txt disallows us is never fetched | `test_redirect_to_a_host_that_disallows_us_is_never_fetched` | integration | PASS |
+| 36 | A redirected image is saved under its final URL | `test_redirected_image_is_saved_under_its_final_url` | integration | PASS |
+| 37 | The client keeps 3xx unfollowed and reports the absolute `Location` | `test_fetch_keeps_redirects_unfollowed_with_their_absolute_location` | unit | PASS |
+| 38 | robots.txt behind a redirect is still read | `test_redirected_robots_file_is_followed` | unit | PASS |
+| 39 | A body over the byte limit raises `FetchError` | `test_fetch_raises_fetch_error_when_the_body_is_larger_than_the_limit` | unit | PASS |
+| 40 | Image size is read from the header without decoding pixels | `test_reads_long_side_from_the_header_without_decoding_pixels` | unit | PASS |
+| 41 | Images over 16384px are skipped | `test_image_larger_than_the_maximum_is_skipped` | integration | PASS |
+| 42 | Loopback, private, link-local and scoped IPv6 addresses are not public; a global one is; an IP literal resolves to itself once | `test_address_policy.py` (8) | unit | PASS |
+| 43 | A host resolving to a private address is skipped, and nothing on it is requested (robots.txt included) | `test_request_to_a_private_address_is_skipped_without_fetching` | integration | PASS |
+| 44 | A host that doesn't resolve is failed | `test_request_to_an_unresolvable_host_is_failed` | integration | PASS |
+
+## Known gaps (new)
+- DNS rebinding: the host is resolved by our check and again by `httpx`; a host could answer differently the second time.
+- Review findings L1–L7 are still open.

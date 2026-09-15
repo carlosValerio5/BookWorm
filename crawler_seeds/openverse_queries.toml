@@ -1,0 +1,35 @@
+[[queries]]
+text = "thrift books"
+expected_content = "cover"
+
+[[queries]]
+text = "used books"
+expected_content = "cover"
+
+[[queries]]
+text = "book haul"
+expected_content = "cover"
+
+[[queries]]
+text = "library book sale"
+expected_content = "cover"
+
+[[queries]]
+text = "secondhand bookstore"
+expected_content = "cover"
+
+[[queries]]
+text = "bookshelf"
+expected_content = "spine"
+
+[[queries]]
+text = "isbn"
+expected_content = "isbn"
+
+[[queries]]
+text = "isbn barcode book"
+expected_content = "isbn"
+
+[[queries]]
+text = "back cover book"
+expected_content = "isbn"
