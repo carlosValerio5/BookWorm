@@ -14,7 +14,7 @@ SOURCE_NAME = "commons_categories"
 COMMONS_URL = "https://commons.wikimedia.org"
 COMMONS_MIN_SECONDS_BETWEEN_REQUESTS = 2.0
 MIN_IMAGE_LONG_SIDE = 640
-PHOTO_FILE_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".webp"})
+PHOTO_FILE_EXTENSIONS = frozenset({".jpg", ".jpeg", ".webp"})
 PIXEL_COUNT = re.compile(r"\d[\d,]*")
 
 
