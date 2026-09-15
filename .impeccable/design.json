@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-15T00:00:00Z",
+  "title": "Design System: BookWorm Annotator",
+  "extensions": {
+    "colorMeta": {
+      "ground": { "role": "neutral", "displayName": "Warm Ground", "canonical": "#14120b", "tonalRamp": ["#0d0b05", "#27251e", "#44423b", "#63615b", "#84827d", "#a6a5a0", "#cac9c5", "#efeeeb"] },
+      "surface-1": { "role": "neutral", "displayName": "Window Surface", "canonical": "#1b1913", "tonalRamp": ["#0d0b06", "#27251f", "#44423c", "#63615c", "#84827d", "#a6a5a1", "#cac9c5", "#efeeeb"] },
+      "surface-2": { "role": "neutral", "displayName": "Raised Surface", "canonical": "#201e18", "tonalRamp": ["#0d0b06", "#27251f", "#44423c", "#63615c", "#84827d", "#a6a5a0", "#cac9c5", "#efeeeb"] },
+      "text": { "role": "neutral", "displayName": "Paper Text", "canonical": "#edecec", "tonalRamp": ["#0b0b0b", "#252525", "#424242", "#616161", "#838282", "#a5a5a5", "#cac9c9", "#efeeee"] },
+      "text-2": { "role": "neutral", "displayName": "Secondary Text", "canonical": "color-mix(in oklab, #edecec 60%, transparent)" },
+      "text-3": { "role": "neutral", "displayName": "Tertiary Text", "canonical": "color-mix(in oklab, #edecec 50%, transparent)" },
+      "line-1": { "role": "neutral", "displayName": "Faint Hairline", "canonical": "color-mix(in oklab, #edecec 2.5%, transparent)" },
+      "line-2": { "role": "neutral", "displayName": "Hairline", "canonical": "color-mix(in oklab, #edecec 10%, transparent)" },
+      "line-3": { "role": "neutral", "displayName": "Strong Hairline", "canonical": "color-mix(in oklab, #edecec 20%, transparent)" },
+      "accent": { "role": "primary", "displayName": "Live Orange", "canonical": "#f54e00", "tonalRamp": ["#2c0000", "#560000", "#820100", "#b02500", "#e14300", "#ff6d39", "#ff9b6f", "#ffc8a0"] },
+      "good": { "role": "secondary", "displayName": "Labeled Green", "canonical": "#1f8a65", "tonalRamp": ["#001304", "#00301a", "#005135", "#057352", "#369672", "#68b896", "#95dbbb", "#c2ffe2"] },
+      "bad": { "role": "secondary", "displayName": "Problem Red", "canonical": "#cf2d56", "tonalRamp": ["#2d0001", "#560011", "#820029", "#b01844", "#db4263", "#fc7288", "#ff9eaf", "#ffcad7"] },
+      "type-book": { "role": "tertiary", "displayName": "Sage", "canonical": "#9fc9a2", "tonalRamp": ["#040e05", "#192a1a", "#324834", "#4e6950", "#6b8c6e", "#8ab18d", "#add6b0", "#d5fad7"] },
+      "type-barcode": { "role": "tertiary", "displayName": "Clay", "canonical": "#e59a7c", "tonalRamp": ["#1a0400", "#3b1b0d", "#5f3524", "#86523d", "#ae7158", "#d99174", "#fdb699", "#ffddc3"] },
+      "type-printed-isbn": { "role": "tertiary", "displayName": "Straw", "canonical": "#e6c07b", "tonalRamp": ["#130900", "#312205", "#523f1b", "#755d31", "#9a7e4a", "#c1a063", "#e9c37f", "#ffe9ac"] },
+      "type-title": { "role": "tertiary", "displayName": "Sky", "canonical": "#9fbbe0", "tonalRamp": ["#050b16", "#1a2635", "#344357", "#50637b", "#6e84a1", "#8da7c9", "#b0ccef", "#d8f1ff"] },
+      "type-author": { "role": "tertiary", "displayName": "Lilac", "canonical": "#c0a8dd", "tonalRamp": ["#0f0717", "#2a1f36", "#483b58", "#69597c", "#8c78a3", "#b099cb", "#d4bdf0", "#f9e4ff"] },
+      "type-publisher": { "role": "tertiary", "displayName": "Rose", "canonical": "#e5a0c0", "tonalRamp": ["#17040d", "#361b28", "#593546", "#7e5167", "#a66f89", "#cf8fad", "#f5b2d1", "#ffdaf6"] },
+      "type-other-text": { "role": "tertiary", "displayName": "Stone", "canonical": "#b9b4a7", "tonalRamp": ["#0d0b07", "#27251f", "#44423b", "#646158", "#868278", "#a9a598", "#cec9bc", "#f3eee3"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Empty-stage prompt in the photo well; the class-lock title uses the same weight at 14px." },
+      "title": { "displayName": "Title", "purpose": "Photo name in the title bar, button text, selected box type in a box row." },
+      "body": { "displayName": "Body", "purpose": "Root size: rows, segments, type options, inputs." },
+      "label": { "displayName": "Label", "purpose": "Pane and group headings in sentence case at text-2." },
+      "caption": { "displayName": "Caption", "purpose": "Counts, save status, status bar, problems, notes." },
+      "mono-number": { "displayName": "Mono Number", "purpose": "Pixel coordinates (11.5px in box rows), photo size, cursor readout, timer." },
+      "keycap": { "displayName": "Keycap", "purpose": "Keyboard shortcut keys beside their controls." }
+    },
+    "shadows": [
+      { "name": "window-lift", "value": "0 30px 80px -30px rgb(0 0 0 / 0.7)", "purpose": "The app window only." },
+      { "name": "current-row-ring", "value": "inset 0 0 0 1px var(--line-2)", "purpose": "Current queue row." },
+      { "name": "input-focus-halo", "value": "0 0 0 3px var(--line-2)", "purpose": "Focused text inputs, with the border moving to line-3." },
+      { "name": "canvas-box-halo", "value": "stroke rgba(20, 18, 11, 0.6) at line width + 2px", "purpose": "Ground halo under every box stroke so it reads over any photo." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "All state transitions." },
+      { "name": "duration-state", "value": "160ms", "purpose": "Background, border and color changes on rows, segments, options, inputs, buttons." },
+      { "name": "loading-pulse", "value": "1.2s ease-in-out infinite, opacity to 0.45", "purpose": "Empty-stage title while a photo loads." },
+      { "name": "reduced-motion", "value": "animation: none; transition: none", "purpose": "Everything under prefers-reduced-motion: reduce." }
+    ],
+    "breakpoints": [
+      { "name": "narrow-desktop", "value": "1180px" },
+      { "name": "stacked", "value": "860px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Pill Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one commit action, filled with the text color, with its shortcut keycap.",
+      "html": "<button class=\"ds-pill-primary\" type=\"button\"><span>Save</span><kbd class=\"ds-kbd-on-fill\">⌘S</kbd></button>",
+      "css": ".ds-pill-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 34px; min-width: 240px; padding: 0 14px; font: 500 13px/1.45 var(--font-sans, system-ui, -apple-system, sans-serif); color: var(--ground, #14120b); background: var(--text, #edecec); border: 1px solid var(--text, #edecec); border-radius: 999px; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), opacity 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-pill-primary:hover { background: color-mix(in oklab, #edecec 86%, #14120b); } .ds-pill-primary:focus-visible { outline: 2px solid rgb(237 236 236 / 0.6); outline-offset: 2px; } .ds-pill-primary:disabled { opacity: 0.6; cursor: progress; } .ds-kbd-on-fill { display: inline-block; min-width: 18px; padding: 3px 5px; font: 500 11px/1 ui-monospace, 'SF Mono', Menlo, monospace; text-align: center; color: rgb(20 18 11 / 0.7); background: transparent; border: 1px solid rgb(20 18 11 / 0.22); border-radius: 5px; }"
+    },
+    {
+      "name": "Segmented Class Control",
+      "kind": "custom",
+      "refersTo": "segment-active",
+      "description": "Pill track of equal segments with keycaps; the pressed segment fills with the text color.",
+      "html": "<div class=\"ds-segmented\" role=\"group\"><button class=\"ds-segment\" aria-pressed=\"false\">isbn <kbd class=\"ds-kbd\">1</kbd></button><button class=\"ds-segment\" aria-pressed=\"true\">cover <kbd class=\"ds-kbd\">2</kbd></button><button class=\"ds-segment\" aria-pressed=\"false\">unknown <kbd class=\"ds-kbd\">3</kbd></button></div>",
+      "css": ".ds-segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; width: 292px; padding: 3px; background: #14120b; border: 1px solid rgb(237 236 236 / 0.1); border-radius: 999px; } .ds-segment { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; font: 13px/1.45 system-ui, -apple-system, sans-serif; color: rgb(237 236 236 / 0.6); background: none; border: 0; border-radius: 999px; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-segment:hover { color: #edecec; background: rgb(237 236 236 / 0.1); } .ds-segment:focus-visible { outline: 2px solid rgb(237 236 236 / 0.6); outline-offset: 2px; } .ds-segment[aria-pressed='true'] { color: #14120b; background: #edecec; } .ds-kbd { display: inline-block; min-width: 18px; padding: 3px 5px; font: 500 11px/1 ui-monospace, 'SF Mono', Menlo, monospace; text-align: center; color: rgb(237 236 236 / 0.6); background: rgb(237 236 236 / 0.025); border: 1px solid rgb(237 236 236 / 0.1); border-radius: 5px; } .ds-segment[aria-pressed='true'] .ds-kbd { color: rgb(20 18 11 / 0.7); background: transparent; border-color: rgb(20 18 11 / 0.22); }"
+    },
+    {
+      "name": "Box Type Option",
+      "kind": "chip",
+      "refersTo": "type-option-selected",
+      "description": "Type chooser row with data-color swatch and keycap; selected border tints to the type color.",
+      "html": "<div class=\"ds-type-grid\"><button class=\"ds-type-option\" style=\"--type-color: #9fc9a2\" aria-pressed=\"false\"><span class=\"ds-swatch\"></span><span>book</span><kbd class=\"ds-kbd\">b</kbd></button><button class=\"ds-type-option\" style=\"--type-color: #9fbbe0\" aria-pressed=\"true\"><span class=\"ds-swatch\"></span><span>title</span><kbd class=\"ds-kbd\">t</kbd></button></div>",
+      "css": ".ds-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 292px; } .ds-type-option { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 8px; height: 32px; padding: 0 5px 0 10px; font: 13px/1.45 system-ui, -apple-system, sans-serif; text-align: left; color: rgb(237 236 236 / 0.6); background: none; border: 1px solid rgb(237 236 236 / 0.025); border-radius: 8px; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), border-color 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-type-option:hover { color: #edecec; background: rgb(237 236 236 / 0.025); } .ds-type-option:focus-visible { outline: 2px solid rgb(237 236 236 / 0.6); outline-offset: 2px; } .ds-type-option[aria-pressed='true'] { color: #edecec; background: #201e18; border-color: color-mix(in oklab, var(--type-color) 55%, transparent); } .ds-swatch { width: 8px; height: 8px; background: var(--type-color); border-radius: 2px; } .ds-kbd { display: inline-block; min-width: 18px; padding: 3px 5px; font: 500 11px/1 ui-monospace, 'SF Mono', Menlo, monospace; text-align: center; color: rgb(237 236 236 / 0.6); background: rgb(237 236 236 / 0.025); border: 1px solid rgb(237 236 236 / 0.1); border-radius: 5px; }"
+    },
+    {
+      "name": "Box Text Input",
+      "kind": "input",
+      "refersTo": "text-input",
+      "description": "Ground-filled hairline field with an orange caret and a hairline focus halo.",
+      "html": "<input class=\"ds-input\" placeholder=\"Text inside the box\">",
+      "css": ".ds-input { width: 292px; height: 30px; padding: 0 10px; font: 13px/1.45 system-ui, -apple-system, sans-serif; color: #edecec; caret-color: #f54e00; background: #14120b; border: 1px solid rgb(237 236 236 / 0.1); border-radius: 8px; transition: border-color 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-input::placeholder { color: rgb(237 236 236 / 0.5); } .ds-input:focus { outline: none; border-color: rgb(237 236 236 / 0.2); box-shadow: 0 0 0 3px rgb(237 236 236 / 0.1); }"
+    },
+    {
+      "name": "Photo Queue Row",
+      "kind": "nav",
+      "refersTo": "queue-row-current",
+      "description": "Review-list row: status icon, file name, tabular box count; current row raised with an inset hairline.",
+      "html": "<ul class=\"ds-queue\"><li><button class=\"ds-queue-row ds-current\"><span class=\"ds-queue-icon ds-labeled\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"6.25\"/><path d=\"m5.4 8.2 1.8 1.8 3.4-3.6\"/></svg></span><span class=\"ds-queue-name\">IMG_0012.HEIC</span><span class=\"ds-queue-meta\">3 boxes</span></button></li><li><button class=\"ds-queue-row\"><span class=\"ds-queue-icon\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"6.25\" stroke-dasharray=\"2.4 2.2\"/></svg></span><span class=\"ds-queue-name\">IMG_0013.HEIC</span><span class=\"ds-queue-meta\">not labeled</span></button></li></ul>",
+      "css": ".ds-queue { display: grid; gap: 2px; width: 248px; margin: 0; padding: 0; list-style: none; } .ds-queue-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 10px; align-items: center; width: 100%; padding: 8px; font: 13px/1.45 system-ui, -apple-system, sans-serif; text-align: left; color: rgb(237 236 236 / 0.6); background: none; border: 0; border-radius: 8px; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-queue-row:hover { color: #edecec; background: rgb(237 236 236 / 0.025); } .ds-queue-row:focus-visible { outline: 2px solid rgb(237 236 236 / 0.6); outline-offset: 2px; } .ds-queue-row.ds-current { color: #edecec; background: #201e18; box-shadow: inset 0 0 0 1px rgb(237 236 236 / 0.1); } .ds-queue-icon { display: grid; color: rgb(237 236 236 / 0.5); } .ds-queue-icon.ds-labeled { color: #1f8a65; } .ds-queue-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; } .ds-queue-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-queue-meta { font-size: 12px; font-variant-numeric: tabular-nums; color: rgb(237 236 236 / 0.5); white-space: nowrap; }"
+    },
+    {
+      "name": "Keycap",
+      "kind": "chip",
+      "refersTo": "keycap",
+      "description": "Hairline mono key shown beside every keyboard-reachable control.",
+      "html": "<span class=\"ds-hint\"><kbd class=\"ds-kbd\">Del</kbd>remove box</span>",
+      "css": ".ds-hint { display: inline-flex; align-items: center; gap: 6px; font: 12px/1.45 system-ui, -apple-system, sans-serif; color: rgb(237 236 236 / 0.5); } .ds-kbd { display: inline-block; min-width: 18px; padding: 3px 5px; font: 500 11px/1 ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; text-align: center; color: rgb(237 236 236 / 0.6); background: rgb(237 236 236 / 0.025); border: 1px solid rgb(237 236 236 / 0.1); border-radius: 5px; }"
+    },
+    {
+      "name": "App Window Title Bar",
+      "kind": "custom",
+      "refersTo": "window",
+      "description": "The signature window chrome: neutral traffic lights, centered photo name with mono size, save status and progress.",
+      "html": "<div class=\"ds-window\"><header class=\"ds-title-bar\"><div class=\"ds-lights\"><span></span><span></span><span></span></div><div class=\"ds-title\"><span class=\"ds-title-name\">cover/IMG_0012.HEIC</span><span class=\"ds-title-size\">4284 × 5712</span></div><div class=\"ds-title-meta\"><span class=\"ds-save\">Saved</span><span class=\"ds-progress\">2 of 2 labeled</span></div></header><div class=\"ds-body\"></div><footer class=\"ds-status\"><span class=\"ds-mode\">Label</span><span class=\"ds-timer\">0:05</span></footer></div>",
+      "css": ".ds-window { width: 640px; overflow: hidden; background: #1b1913; border: 1px solid rgb(237 236 236 / 0.1); border-radius: 12px; box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.7); font: 13px/1.45 system-ui, -apple-system, sans-serif; color: #edecec; } .ds-title-bar { display: grid; grid-template-columns: minmax(96px, 1fr) minmax(0, auto) minmax(96px, 1fr); align-items: center; gap: 16px; height: 40px; padding: 8px 14px; border-bottom: 1px solid rgb(237 236 236 / 0.1); } .ds-lights { display: flex; gap: 8px; } .ds-lights span { width: 12px; height: 12px; border-radius: 50%; background: rgb(237 236 236 / 0.2); } .ds-title { display: flex; align-items: baseline; justify-content: center; gap: 10px; } .ds-title-name { font-weight: 500; white-space: nowrap; } .ds-title-size { font: 12px ui-monospace, 'SF Mono', Menlo, monospace; color: rgb(237 236 236 / 0.5); white-space: nowrap; } .ds-title-meta { display: flex; justify-content: flex-end; align-items: center; gap: 14px; font-size: 12px; } .ds-save { display: inline-flex; align-items: center; gap: 6px; color: rgb(237 236 236 / 0.6); } .ds-save::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #1f8a65; } .ds-progress { color: rgb(237 236 236 / 0.5); font-variant-numeric: tabular-nums; white-space: nowrap; } .ds-body { height: 120px; background: #14120b; } .ds-status { display: flex; align-items: center; gap: 18px; height: 30px; padding: 0 12px; font-size: 12px; color: rgb(237 236 236 / 0.6); border-top: 1px solid rgb(237 236 236 / 0.1); } .ds-mode { display: inline-flex; align-items: center; gap: 7px; color: #edecec; } .ds-mode::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #f54e00; } .ds-timer { font-family: ui-monospace, 'SF Mono', Menlo, monospace; color: rgb(237 236 236 / 0.5); }"
+    },
+    {
+      "name": "Problem",
+      "kind": "card",
+      "refersTo": "problem",
+      "description": "Validation problem: red tint, red-mixed text, line icon.",
+      "html": "<ul class=\"ds-problems\"><li class=\"ds-problem\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"6.25\"/><path d=\"M8 4.9v3.7m0 2.5v.05\"/></svg><span>printed_isbn box 1 needs a valid ISBN</span></li></ul>",
+      "css": ".ds-problems { width: 292px; margin: 0; padding: 0; list-style: none; } .ds-problem { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; padding: 8px 10px; font: 12px/1.45 system-ui, -apple-system, sans-serif; color: color-mix(in oklab, #cf2d56 45%, #edecec); background: color-mix(in oklab, #cf2d56 14%, transparent); border-radius: 8px; } .ds-problem svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Review Window",
+    "overview": "The annotator is a warm dark desktop application window, drawn from the Cursor website's style that the user made the binding reference. Everything sits inside one rounded window on a thin margin of ground: a title bar with traffic lights and a centered title, a quiet list on the left, the photo as the main editor in a darker well, a label pane on the right and a status bar along the bottom. The photo is the only loud thing on screen; the chrome is text on warm near-black, separated by hairlines rather than boxes.\n\nThe system is dense and calm. One system sans carries every level at 12 to 15px, and hierarchy comes from weight (400 versus 500) and from three text opacities, not from size jumps. Mono appears only where a character must align: keycaps, pixel coordinates, the photo size and the timer. Color is rationed by meaning: orange marks only what is live, green means labeled, red means a problem, and a set of soft pastel data colors identify box types on photos.\n\nControls are full pills and soft rows. Keyboard shortcuts are visible as small hairline keycaps next to the control they trigger, because the tool is driven from the keyboard.",
+    "keyCharacteristics": [
+      "One window with traffic lights, a 40px title bar and a 30px status bar framing three columns.",
+      "Warm dark ground and two raised surfaces; depth by tone and hairline, one soft window shadow.",
+      "Text at 100%, 60% and 50%; hairlines of the same text at 2.5%, 10% and 20%.",
+      "Orange for the live state only; primary action filled with the text color, not the accent.",
+      "System sans everywhere, mono only for keys and numbers that align.",
+      "Box-type pastels as data colors, shown as 8px swatches in chrome and as strokes and chips on the photo."
+    ],
+    "rules": [
+      { "name": "The Live Only Rule", "body": "Orange marks the current live state (mode dot, caret, selection). If an element is not happening right now, it is not orange.", "section": "colors" },
+      { "name": "The Text Is The Ink Rule", "body": "Neutrals are the text color at an opacity, never a new gray. Hairlines are text at 2.5, 10 or 20%; secondary text is 60 or 50%.", "section": "colors" },
+      { "name": "The Data Stays On The Photo Rule", "body": "Box-type pastels identify labels. In chrome they shrink to a swatch, an edge or a tinted border; they never fill a control.", "section": "colors" },
+      { "name": "The Weight Not Size Rule", "body": "The whole ramp lives between 11 and 15px. Promote with weight 500 or full text opacity before reaching for a bigger size.", "section": "typography" },
+      { "name": "The Mono Means Aligned Rule", "body": "Mono is for keys and numbers that are compared or read as coordinates. Words are always sans.", "section": "typography" },
+      { "name": "The One Lift Rule", "body": "Only the window casts a shadow. Everything inside it separates by tone and hairline.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the whole tool inside one window with traffic lights, a centered title and a status bar.",
+      "Do derive every neutral from the text color at 60% or 50% for text and 2.5%, 10% or 20% for hairlines.",
+      "Do keep tertiary text at 50% so counts and hints hold 4.5:1.",
+      "Do fill the one commit action with the text color and make choose-and-commit controls full pills.",
+      "Do show the shortcut as a keycap next to every keyboard-reachable control.",
+      "Do set coordinates, sizes and timers in mono with tabular figures, in original photo pixels.",
+      "Do ease state changes over 160ms with cubic-bezier(0.16, 1, 0.3, 1), and drop all motion under reduced-motion."
+    ],
+    "donts": [
+      "Don't use orange for anything that is not the live state: no orange buttons, borders or headings.",
+      "Don't introduce a gray that is not the text color at an opacity.",
+      "Don't fill chrome controls with box-type colors; they stay swatches, edges and tinted borders.",
+      "Don't add drop shadows inside the window; separate with tone and hairlines.",
+      "Don't set words in mono or bring in a display or serif face.",
+      "Don't color the traffic lights; they are neutral line-3 dots."
+    ]
+  }
+}
