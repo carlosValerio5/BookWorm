@@ -4,9 +4,10 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import TextIO
 
 import structlog
-from structlog.typing import EventDict, WrappedLogger
+from structlog.typing import EventDict, Processor, WrappedLogger
 
 DEFAULT_LOG_FILE_PATH = Path("logs/bookworm.jsonl")
 
@@ -26,18 +27,28 @@ SHARED_PROCESSORS = [
 ]
 
 
-def configure_logging(log_file_path: Path = DEFAULT_LOG_FILE_PATH, level: int = logging.INFO) -> None:
-    log_file_path.parent.mkdir(parents=True, exist_ok=True)
-    json_formatter = structlog.stdlib.ProcessorFormatter(
+def build_formatter(renderer: Processor) -> structlog.stdlib.ProcessorFormatter:
+    return structlog.stdlib.ProcessorFormatter(
         foreign_pre_chain=SHARED_PROCESSORS,
-        processors=[
-            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-            structlog.processors.JSONRenderer(),
-        ],
+        processors=[structlog.stdlib.ProcessorFormatter.remove_processors_meta, renderer],
     )
-    handlers = [logging.StreamHandler(sys.stderr), logging.FileHandler(log_file_path, encoding="utf-8")]
-    for handler in handlers:
-        handler.setFormatter(json_formatter)
+
+
+def build_terminal_handler(terminal_stream: TextIO) -> logging.Handler:
+    terminal_handler = logging.StreamHandler(terminal_stream)
+    terminal_handler.setFormatter(build_formatter(structlog.dev.ConsoleRenderer(colors=terminal_stream.isatty())))
+    return terminal_handler
+
+
+def build_json_file_handler(log_file_path: Path) -> logging.Handler:
+    log_file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
+    file_handler.setFormatter(build_formatter(structlog.processors.JSONRenderer()))
+    return file_handler
+
+
+def configure_logging(log_file_path: Path = DEFAULT_LOG_FILE_PATH, level: int = logging.INFO) -> None:
+    handlers = [build_terminal_handler(sys.stderr), build_json_file_handler(log_file_path)]
     logging.basicConfig(handlers=handlers, level=level, force=True)
     structlog.configure(
         processors=[*SHARED_PROCESSORS, structlog.stdlib.ProcessorFormatter.wrap_for_formatter],

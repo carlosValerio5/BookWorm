@@ -14,6 +14,7 @@ const BOX_TYPE_SHORTCUTS = [
   { boxType: "other_text", key: "o", color: "#495057" },
 ];
 
+const BOX_TYPES_WITHOUT_TEXT = new Set(["barcode"]);
 const MIN_DRAWN_BOX_CANVAS_PIXELS = 4;
 const TEXT_FIELD_TAGS = new Set(["INPUT", "SELECT", "TEXTAREA"]);
 
@@ -45,6 +46,10 @@ const state = {
 
 function colorForBoxType(boxType) {
   return BOX_TYPE_SHORTCUTS.find((shortcut) => shortcut.boxType === boxType).color;
+}
+
+function boxTypeTakesText(boxType) {
+  return !BOX_TYPES_WITHOUT_TEXT.has(boxType);
 }
 
 function currentPhotoScale() {
@@ -282,14 +287,17 @@ function renderPhotoList() {
   photoListElement.replaceChildren(...state.photos.map(buildPhotoListItem));
 }
 
+function changeBoxType(labeledBox, boxType) {
+  labeledBox.box_type = boxType;
+  labeledBox.text = boxTypeTakesText(boxType) ? labeledBox.text : "";
+  markChanged();
+  renderAll();
+}
+
 function buildBoxTypeSelect(labeledBox) {
   const select = document.createElement("select");
   BOX_TYPE_SHORTCUTS.forEach(({ boxType }) => select.append(new Option(boxType, boxType, false, boxType === labeledBox.box_type)));
-  select.addEventListener("change", () => {
-    labeledBox.box_type = select.value;
-    markChanged();
-    renderCanvas();
-  });
+  select.addEventListener("change", () => changeBoxType(labeledBox, select.value));
   return select;
 }
 
@@ -303,6 +311,13 @@ function buildBoxTextInput(labeledBox) {
     markChanged();
   });
   return input;
+}
+
+function buildNoTextNote() {
+  const note = document.createElement("span");
+  note.className = "no-text";
+  note.textContent = "no text";
+  return note;
 }
 
 function buildBoxListItem(labeledBox, boxIndex) {
@@ -321,7 +336,8 @@ function buildBoxListItem(labeledBox, boxIndex) {
     state.selectedBoxIndex = boxIndex;
     renderCanvas();
   });
-  item.append(buildBoxTypeSelect(labeledBox), buildBoxTextInput(labeledBox), deleteButton);
+  const textCell = boxTypeTakesText(labeledBox.box_type) ? buildBoxTextInput(labeledBox) : buildNoTextNote();
+  item.append(buildBoxTypeSelect(labeledBox), textCell, deleteButton);
   return item;
 }
 

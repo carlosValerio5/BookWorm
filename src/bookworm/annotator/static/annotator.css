@@ -176,6 +176,12 @@ kbd {
   min-width: 0;
 }
 
+#box-list .no-text {
+  align-self: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 #problem-list li {
   color: var(--problem);
 }

@@ -12,7 +12,7 @@ from bookworm.annotator.annotation_types import (
     LabeledBox,
     PhotoAnnotation,
 )
-from bookworm.isbn_validation import extract_isbn_from_text, is_isbn_barcode
+from bookworm.isbn_validation import extract_isbn_from_text
 from bookworm.logging_setup import log_call
 from bookworm.scan_types import BoundingBox
 
@@ -45,6 +45,10 @@ def accepts_any_text(_text: str) -> bool:
     return True
 
 
+def has_no_text(text: str) -> bool:
+    return text == ""
+
+
 def has_visible_text(text: str) -> bool:
     return text.strip() != ""
 
@@ -55,7 +59,7 @@ def contains_valid_isbn(text: str) -> bool:
 
 BOX_TEXT_RULES: dict[BoxType, tuple[Callable[[str], bool], str]] = {
     BoxType.BOOK: (accepts_any_text, ""),
-    BoxType.BARCODE: (is_isbn_barcode, "text {text!r} is not an ISBN barcode"),
+    BoxType.BARCODE: (has_no_text, "must not have text"),
     BoxType.PRINTED_ISBN: (contains_valid_isbn, "text {text!r} has no valid ISBN"),
     BoxType.TITLE: (has_visible_text, "needs text"),
     BoxType.AUTHOR: (has_visible_text, "needs text"),
