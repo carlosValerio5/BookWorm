@@ -6,6 +6,14 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 
 ## [Unreleased]
 
+### Added
+- `bookworm-crawl run <source>` collects candidate photos for YOLO fine-tuning. A run picks up where the last one stopped, obeys robots.txt, waits between requests to each site, and stops on 401, 403 or 429. State is kept in `dataset/crawled/crawl_state.sqlite3`.
+- `bookworm-crawl status` prints request counts per source and saved photos per hint label.
+- `blog_pages` source: approved book-haul blogs from `crawler_seeds/blog_pages.toml`, photos from 600px.
+- `commons_categories` source: Wikimedia Commons category pages from `crawler_seeds/commons_categories.toml`. Downloads the largest standard thumbnail of at least 640px, keeps the license, and skips PNGs.
+- `openverse_photos` source. It collects nothing today, because Openverse's robots.txt blocks its image API (D17).
+- Every saved photo carries a hint label (`cover`, `isbn` or `spine`) and where it came from.
+
 ## [0.1.0] - 2026-09-15
 
 ### Added
