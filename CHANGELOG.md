@@ -14,6 +14,12 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 - `openverse_photos` source. It collects nothing today, because Openverse's robots.txt blocks its image API (D17).
 - Every saved photo carries a hint label (`cover`, `isbn` or `spine`) and where it came from.
 - Crawler safety limits: a 401 or 403 fails that one request instead of stopping the run; redirects are queued as new requests, so the target's robots.txt is checked and the photo is saved under its final URL; responses stop at 30 MB; image size is read from the file header, and images over 16384px are skipped; hosts that resolve to loopback, private or link-local addresses are skipped.
+- `bookworm annotator PHOTOS_DIR` opens a local web app at `http://127.0.0.1:8765` for labeling book photos by hand. You pick the class first, then draw boxes typed as `book`, `barcode`, `printed_isbn`, `title`, `author`, `publisher` or `other_text` and type the text inside each text box. Barcode boxes have no text. Every photo gets one JSON label in `labels/` with boxes in the original photo's pixels (Book Annotator PRD, milestone 1).
+
+### Changed
+- Terminal logs are readable `event key=value` lines, colored in a real terminal. `logs/bookworm.jsonl` still gets every event as JSON.
+- The annotator is redesigned in the style of Cursor's website: a warm dark window with the photo path in the title bar, a larger photo, photos grouped into "To label" and "Labeled" with box counts, a status bar with mode, box type, cursor pixels and a labeling timer, and box tags that avoid covering other boxes. Keyboard shortcuts and the class-first lock are unchanged.
+- `/api/photos` returns each photo's `box_count`.
 
 ## [0.1.0] - 2026-09-15
 

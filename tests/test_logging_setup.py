@@ -67,6 +67,21 @@ def test_bound_scan_id_is_added_to_every_event(tmp_path: Path) -> None:
     assert read_log_events(log_file_path)[0]["scan_id"] == "scan-123"
 
 
+def test_terminal_logs_are_readable_lines_while_file_keeps_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    log_file_path = tmp_path / "bookworm.jsonl"
+    configure_logging(log_file_path)
+    logger = structlog.stdlib.get_logger(TEST_SERVICE_NAME)
+
+    logger.info("scan_classified", kind="cover")
+
+    terminal_output = capsys.readouterr().err
+    assert "scan_classified" in terminal_output
+    assert "kind=cover" in terminal_output
+    assert TEST_SERVICE_NAME in terminal_output
+    assert not terminal_output.lstrip().startswith("{")
+    assert read_log_events(log_file_path)[0]["kind"] == "cover"
+
+
 def test_third_party_stdlib_logs_are_written_as_json(tmp_path: Path) -> None:
     log_file_path = tmp_path / "bookworm.jsonl"
     configure_logging(log_file_path)

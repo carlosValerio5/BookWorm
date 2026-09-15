@@ -125,7 +125,7 @@ Stock YOLO has no barcode class, so barcodes go to zxing-cpp instead.
 
 ## Logs
 
-Each step writes a JSON line to stderr and to `logs/bookworm.jsonl`. Here's one:
+Each step logs an event. The terminal shows it as a readable line (colored when it's a real terminal), and `logs/bookworm.jsonl` gets the same event as JSON. Here's one from the file:
 
 ```json
 {"call": "read_isbn_barcodes", "duration_ms": 30.09, "event": "call_finished", "scan_id": "37ef3305f38b4d73992dbd1144bd389e", "level": "info", "service": "bookworm.barcode_reading", "timestamp": "2026-09-15T06:51:09.555108Z"}
@@ -149,11 +149,32 @@ uv run pytest --cov
 
 You can also test against your own photos. Put them in `dataset/cover/`, `dataset/isbn/` or `dataset/unknown/`, and the slow tests check that each photo gets the kind of its folder. Name ISBN photos after their number (`dataset/isbn/9780306406157.heic`) and the test also checks that the scanner reads that number. `dataset/` is in `.gitignore`, so your photos stay on your machine.
 
+## Labeling photos
+
+`bookworm annotator` is a small local web app for building ground truth: the class, boxes and text you expect on a real photo.
+
+```bash
+uv run bookworm annotator dataset/
+```
+
+Open `http://127.0.0.1:8765`, pick a photo and pick its class first (`1` isbn, `2` cover, `3` unknown). Choose a box type (`b` book, `c` barcode, `i` printed_isbn, `t` title, `a` author, `p` publisher, `o` other_text), drag on the photo to draw a box, and type the text inside it. Barcode boxes have no text; the number goes in a `printed_isbn` box. Drag a box to move it. `Delete` removes the selected box, `Ctrl/⌘ S` saves and `n` opens the next photo.
+
+<p align="center">
+  <img src="assets/annotator-labeling.png" alt="BookWorm Annotator: a dark desktop-style window with a back cover photo in the center, barcode and printed_isbn boxes drawn on it, and the class, box type and saved boxes panels on the right" width="900">
+  <br>
+  <sub>A back cover mid-label: <code>barcode</code> over the EAN-13, <code>printed_isbn</code> and <code>title</code> boxes with their text, saved and ready for the next photo.</sub>
+</p>
+
+Each photo gets a JSON file in `labels/` that mirrors its path, like `labels/cover/IMG_0012.HEIC.json`. Boxes are stored in the original photo's pixels, the same coordinates the scanner reports. Saving is refused when a box falls outside the photo, a `printed_isbn` has no valid ISBN, or a text box is empty. `labels/` is in `.gitignore`, like `dataset/`.
+
 ## Project layout
 
 | Module | Job |
 |---|---|
-| `cli.py` | The `scan` and `annotate` commands (Typer) |
+| `cli.py` | The `scan`, `annotate` and `annotator` commands (Typer) |
+| `annotator/web_app.py` | The local labeling web app and its API (FastAPI) |
+| `annotator/annotation_storage.py` | Lists photos, validates labels and saves them |
+| `annotator/annotation_types.py` | The dataclasses that end up in a label file |
 | `scan_classification.py` | Runs the three readers and picks the kind |
 | `image_loading.py` | Opens JPG, PNG and HEIC files |
 | `barcode_reading.py` | EAN-13 barcodes to ISBNs |
