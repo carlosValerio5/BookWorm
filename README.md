@@ -149,11 +149,26 @@ uv run pytest --cov
 
 You can also test against your own photos. Put them in `dataset/cover/`, `dataset/isbn/` or `dataset/unknown/`, and the slow tests check that each photo gets the kind of its folder. Name ISBN photos after their number (`dataset/isbn/9780306406157.heic`) and the test also checks that the scanner reads that number. `dataset/` is in `.gitignore`, so your photos stay on your machine.
 
+## Labeling photos
+
+`bookworm annotator` is a small local web app for building ground truth: the class, boxes and text you expect on a real photo.
+
+```bash
+uv run bookworm annotator dataset/
+```
+
+Open `http://127.0.0.1:8765`, pick a photo and pick its class first (`1` isbn, `2` cover, `3` unknown). Choose a box type (`b` book, `c` barcode, `i` printed_isbn, `t` title, `a` author, `p` publisher, `o` other_text), drag on the photo to draw a box, and type the text inside it. Drag a box to move it. `Delete` removes the selected box, `Ctrl/⌘ S` saves and `n` opens the next photo.
+
+Each photo gets a JSON file in `labels/` that mirrors its path, like `labels/cover/IMG_0012.HEIC.json`. Boxes are stored in the original photo's pixels, the same coordinates the scanner reports. Saving is refused when a box falls outside the photo, a barcode isn't a valid ISBN, or a text box is empty. `labels/` is in `.gitignore`, like `dataset/`.
+
 ## Project layout
 
 | Module | Job |
 |---|---|
-| `cli.py` | The `scan` and `annotate` commands (Typer) |
+| `cli.py` | The `scan`, `annotate` and `annotator` commands (Typer) |
+| `annotator/web_app.py` | The local labeling web app and its API (FastAPI) |
+| `annotator/annotation_storage.py` | Lists photos, validates labels and saves them |
+| `annotator/annotation_types.py` | The dataclasses that end up in a label file |
 | `scan_classification.py` | Runs the three readers and picks the kind |
 | `image_loading.py` | Opens JPG, PNG and HEIC files |
 | `barcode_reading.py` | EAN-13 barcodes to ISBNs |

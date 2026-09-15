@@ -49,14 +49,14 @@ Labeled photos can be reopened and edited. Labels stay on the developer's machin
 
 | # | Milestone | Outcome | Status | Plan |
 |---|---|---|---|---|
-| 1 | Label a photo by hand | A developer opens a photo, classifies it, draws typed boxes with text, saves, and can reopen and edit it | pending | — |
+| 1 | Label a photo by hand | A developer opens a photo, classifies it, draws typed boxes with text, saves, and can reopen and edit it | in-progress | `.claude/plans/annotator-m1-label-by-hand.plan.md` |
 | 2 | Pre-fill from the scanner | Photos open with the scanner's class, boxes and text already filled in, and the developer only confirms or corrects them | pending | — |
 | 3 | Scanner accuracy test | A test compares scanner output with at least 30 labeled photos and reports where they disagree | pending | — |
 | 4 | Training export | Labels convert to YOLO training format and to the format of an OCR-with-boxes model such as Chandra | pending | — |
 
 ## Open Questions
-- [ ] Which box types exist per class? For example, cover could have title, author and publisher, and ISBN could have barcode and printed ISBN. Is it a fixed list or free text? This decides what the scanner test can compare and which YOLO classes we train.
-- [ ] What training format does an OCR-with-boxes model like Chandra expect? The annotation must hold everything that format needs. TBD, needs validation by reading the model's docs before milestone 1 is done.
+- [x] Which box types exist per class? Decided 2026-09-15: one fixed list for every class, `book`, `barcode`, `printed_isbn`, `title`, `author`, `publisher` and `other_text`.
+- [x] What training format does an OCR-with-boxes model like Chandra expect? Checked 2026-09-15: Chandra returns layout blocks with a label, a pixel box and text, and its fine-tuning format isn't documented. Labels store upright boxes in original photo pixels plus the photo size, which converts to YOLO and to Chandra-style blocks. Revisit at milestone 4.
 - [ ] Do boxes need rotation for sideways text, such as the printed ISBN on the D11 photo, or are upright boxes enough for YOLO and the OCR model?
 - [ ] How do labels survive a lost laptop, and how do two developers share them if they're gitignored?
 - [ ] Should a photo the scanner fails to open (a corrupt HEIC, say) be skipped or recorded as a labeling failure?

@@ -9,8 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
-# Real photos stay local
+# Real photos and their labels stay local
 dataset/
+labels/
 
 # Runtime output
 logs/
