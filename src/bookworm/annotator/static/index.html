@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BookWorm Annotator</title>
+    <link rel="stylesheet" href="/static/annotator.css">
+  </head>
+  <body>
+    <aside id="photo-panel">
+      <h1>BookWorm Annotator</h1>
+      <ul id="photo-list"></ul>
+    </aside>
+
+    <main id="canvas-panel">
+      <div id="status-bar">
+        <span id="current-photo">Pick a photo on the left</span>
+        <span id="save-status"></span>
+      </div>
+      <div id="canvas-frame" class="locked">
+        <img id="photo" alt="">
+        <canvas id="box-canvas"></canvas>
+        <p id="locked-hint">Pick a class first: 1 isbn, 2 cover, 3 unknown</p>
+      </div>
+    </main>
+
+    <aside id="label-panel">
+      <section>
+        <h2>1. Class</h2>
+        <div id="kind-buttons" class="button-grid"></div>
+      </section>
+      <section>
+        <h2>2. Box type</h2>
+        <div id="box-type-buttons" class="button-grid"></div>
+      </section>
+      <section>
+        <h2>3. Boxes</h2>
+        <ol id="box-list"></ol>
+      </section>
+      <ul id="problem-list"></ul>
+      <button id="save-button" type="button">Save <kbd>Ctrl/⌘ S</kbd></button>
+      <p class="hint">Drag on the photo to draw a box. Drag a box to move it. Delete removes the selected box. N opens the next photo.</p>
+    </aside>
+
+    <script src="/static/annotator.js"></script>
+  </body>
+</html>
