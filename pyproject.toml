@@ -9,7 +9,9 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "easyocr>=1.7.2",
+    "httpx>=0.28.1",
     "pillow-heif>=1.7.0",
+    "selectolax>=0.4.11",
     "structlog>=26.1.0",
     "typer>=0.27.2",
     "ultralytics>=8.4.152",

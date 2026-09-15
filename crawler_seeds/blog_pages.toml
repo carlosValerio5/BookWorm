@@ -1,0 +1,16 @@
+# DRAFT pending approval. Probed 2026-09-15: robots.txt allows each page and the posts show real photos of books.
+
+[[pages]]
+url = "https://greenishbookshelf.com/category/book-hauls/"
+expected_content = "cover"
+follow_link_pattern = '/\d{4}/\d{2}/\d{2}/[^/]*haul'
+
+[[pages]]
+url = "https://featuredfutures.wordpress.com/tag/book-haul/"
+expected_content = "cover"
+follow_link_pattern = '/\d{4}/\d{2}/\d{2}/[^/]*book-haul'
+
+[[pages]]
+url = "https://elizabethprata.wordpress.com/2026/07/02/thrift-haul-goodies-and-finds/"
+expected_content = "cover"
+follow_link_pattern = '/\d{4}/\d{2}/\d{2}/[^/]*haul'
