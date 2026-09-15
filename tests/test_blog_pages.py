@@ -47,6 +47,16 @@ def test_extract_downloads_page_images_with_page_labels() -> None:
     )
 
 
+def test_blog_source_keeps_images_from_600px() -> None:
+    assert BLOG_PAGES_SOURCE.min_image_long_side == 600
+
+
+def test_extract_labels_images_named_spine_as_spine() -> None:
+    [download_request] = extract_from_page('<img src="https://blog.example/uploads/bk-haul-221111-Spine.jpg">')
+
+    assert download_request.labels["expected_content"] == "spine"
+
+
 def test_extract_drops_images_from_blocked_hosts() -> None:
     html = (
         '<img src="https://pixel.wp.com/g.gif">'

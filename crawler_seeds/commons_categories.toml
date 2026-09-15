@@ -1,0 +1,15 @@
+[[categories]]
+name = "ISBN"
+expected_content = "isbn"
+
+[[categories]]
+name = "Book sales"
+expected_content = "cover"
+
+[[categories]]
+name = "Second-hand bookshops"
+expected_content = "spine"
+
+[[categories]]
+name = "Bookshelves"
+expected_content = "spine"

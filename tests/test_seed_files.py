@@ -9,8 +9,9 @@ SEED_DIRECTORY = Path(__file__).parents[1] / "crawler_seeds"
 SEED_FILE_BY_SOURCE_NAME = {
     "openverse_photos": SEED_DIRECTORY / "openverse_queries.toml",
     "blog_pages": SEED_DIRECTORY / "blog_pages.toml",
+    "commons_categories": SEED_DIRECTORY / "commons_categories.toml",
 }
-EXPECTED_CONTENT_VALUES = {"cover", "isbn"}
+EXPECTED_CONTENT_VALUES = {"cover", "isbn", "spine"}
 
 
 def test_every_source_has_a_committed_seed_file() -> None:

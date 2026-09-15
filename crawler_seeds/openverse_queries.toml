@@ -20,7 +20,7 @@ expected_content = "cover"
 
 [[queries]]
 text = "bookshelf"
-expected_content = "cover"
+expected_content = "spine"
 
 [[queries]]
 text = "isbn"
