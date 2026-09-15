@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
@@ -10,10 +11,17 @@ from bookworm.logging_setup import log_call
 logger = structlog.stdlib.get_logger(__name__)
 
 HEIF_FILE_SUFFIXES = frozenset({".heic", ".heif"})
+MAX_SCAN_LONG_SIDE = 1280
 
 
 class ImageLoadError(Exception):
     pass
+
+
+@dataclass(frozen=True, eq=False)
+class ShrunkImage:
+    pixels: np.ndarray
+    scale_to_original: float
 
 
 def load_image(image_path: Path) -> np.ndarray:
@@ -41,3 +49,17 @@ def read_heif_image(image_path: Path) -> np.ndarray:
     except (OSError, ValueError) as error:
         raise ImageLoadError(f"Could not read a HEIF image at {image_path}") from error
     return bgr_pixels
+
+
+def shrink_image_to_long_side(image: np.ndarray, max_long_side: int) -> ShrunkImage:
+    with log_call(logger, "shrink_image_to_long_side", max_long_side=max_long_side):
+        shrink_factor = min(1.0, max_long_side / max(image.shape[:2]))
+        shrunk_pixels = cv2.resize(image, None, fx=shrink_factor, fy=shrink_factor, interpolation=cv2.INTER_AREA)
+        logger.info(
+            "image_shrunk",
+            original_height=image.shape[0],
+            original_width=image.shape[1],
+            shrunk_height=shrunk_pixels.shape[0],
+            shrunk_width=shrunk_pixels.shape[1],
+        )
+    return ShrunkImage(pixels=shrunk_pixels, scale_to_original=1 / shrink_factor)

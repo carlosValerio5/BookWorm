@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 
@@ -7,7 +8,7 @@ from ultralytics import YOLO
 
 from bookworm.barcode_reading import read_isbn_barcodes
 from bookworm.book_detection import detect_books
-from bookworm.image_loading import load_image
+from bookworm.image_loading import MAX_SCAN_LONG_SIDE, load_image, shrink_image_to_long_side
 from bookworm.isbn_validation import extract_isbn_from_text
 from bookworm.logging_setup import log_call
 from bookworm.scan_types import BookDetection, IsbnBarcode, RecognizedText, ScanKind, ScanResult
@@ -22,10 +23,15 @@ def scan_image(image_path: Path, book_detector: YOLO, text_reader: easyocr.Reade
         structlog.contextvars.bound_contextvars(scan_id=scan_id),
         log_call(logger, "scan_image", image_path=str(image_path)),
     ):
-        image = load_image(image_path)
-        barcodes = read_isbn_barcodes(image)
-        books = detect_books(image, book_detector)
-        texts = recognize_text(image, text_reader)
+        full_resolution_image = load_image(image_path)
+        shrunk_image = shrink_image_to_long_side(full_resolution_image, MAX_SCAN_LONG_SIDE)
+        barcodes = read_isbn_barcodes(full_resolution_image)
+        books = scale_boxes_to_original(
+            detect_books(shrunk_image.pixels, book_detector), shrunk_image.scale_to_original
+        )
+        texts = scale_boxes_to_original(
+            recognize_text(shrunk_image.pixels, text_reader), shrunk_image.scale_to_original
+        )
         isbn = find_isbn(barcodes, texts)
         kind = decide_scan_kind(isbn, books)
         logger.info(
@@ -45,6 +51,12 @@ def scan_image(image_path: Path, book_detector: YOLO, text_reader: easyocr.Reade
         barcodes=barcodes,
         texts=texts,
     )
+
+
+def scale_boxes_to_original[DetectionWithBox: (BookDetection, RecognizedText)](
+    detections: list[DetectionWithBox], scale_to_original: float
+) -> list[DetectionWithBox]:
+    return [replace(detection, box=detection.box.scaled(scale_to_original)) for detection in detections]
 
 
 def find_isbn(barcodes: list[IsbnBarcode], texts: list[RecognizedText]) -> str | None:

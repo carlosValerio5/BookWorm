@@ -26,6 +26,14 @@ class BoundingBox:
             y_max=int(max(y_values)),
         )
 
+    def scaled(self, factor: float) -> "BoundingBox":
+        return BoundingBox(
+            x_min=round(self.x_min * factor),
+            y_min=round(self.y_min * factor),
+            x_max=round(self.x_max * factor),
+            y_max=round(self.y_max * factor),
+        )
+
 
 @dataclass(frozen=True)
 class BookDetection:
