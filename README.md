@@ -159,6 +159,12 @@ uv run bookworm annotator dataset/
 
 Open `http://127.0.0.1:8765`, pick a photo and pick its class first (`1` isbn, `2` cover, `3` unknown). Choose a box type (`b` book, `c` barcode, `i` printed_isbn, `t` title, `a` author, `p` publisher, `o` other_text), drag on the photo to draw a box, and type the text inside it. Barcode boxes have no text; the number goes in a `printed_isbn` box. Drag a box to move it. `Delete` removes the selected box, `Ctrl/⌘ S` saves and `n` opens the next photo.
 
+<p align="center">
+  <img src="assets/annotator-labeling.png" alt="BookWorm Annotator: a dark desktop-style window with a back cover photo in the center, barcode and printed_isbn boxes drawn on it, and the class, box type and saved boxes panels on the right" width="900">
+  <br>
+  <sub>A back cover mid-label: <code>barcode</code> over the EAN-13, <code>printed_isbn</code> and <code>title</code> boxes with their text, saved and ready for the next photo.</sub>
+</p>
+
 Each photo gets a JSON file in `labels/` that mirrors its path, like `labels/cover/IMG_0012.HEIC.json`. Boxes are stored in the original photo's pixels, the same coordinates the scanner reports. Saving is refused when a box falls outside the photo, a `printed_isbn` has no valid ISBN, or a text box is empty. `labels/` is in `.gitignore`, like `dataset/`.
 
 ## Project layout
