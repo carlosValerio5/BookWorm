@@ -39,9 +39,9 @@ def write_heic_image(image_path: Path, image: np.ndarray) -> Path:
     return image_path
 
 
-def create_ean13_image(code: str) -> np.ndarray:
+def create_ean13_image(code: str, module_scale: int = 4) -> np.ndarray:
     barcode = zxingcpp.create_barcode(code, zxingcpp.BarcodeFormat.EAN13)
-    grayscale_image = np.array(barcode.to_image(scale=4))
+    grayscale_image = np.array(barcode.to_image(scale=module_scale))
     return cv2.cvtColor(grayscale_image, cv2.COLOR_GRAY2BGR)
 
 
@@ -56,6 +56,15 @@ def place_on_white_canvas(image: np.ndarray, top: int, left: int, padding: int =
     canvas = create_blank_image(height=top + height + padding, width=left + width + padding)
     canvas[top : top + height, left : left + width] = image
     return canvas
+
+
+def paste_on_blank_photo(
+    image: np.ndarray, top: int, left: int, photo_height: int = 3000, photo_width: int = 4000
+) -> np.ndarray:
+    height, width = image.shape[:2]
+    photo = create_blank_image(height=photo_height, width=photo_width)
+    photo[top : top + height, left : left + width] = image
+    return photo
 
 
 def write_image(image_path: Path, image: np.ndarray) -> Path:
