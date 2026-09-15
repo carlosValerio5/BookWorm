@@ -1,4 +1,6 @@
 import sqlite3
+from collections.abc import Iterator
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -20,8 +22,9 @@ from bookworm.crawler.crawl_types import RequestPurpose
 
 
 @pytest.fixture
-def crawl_state(tmp_path: Path) -> sqlite3.Connection:
-    return open_crawl_state(tmp_path / "crawl_state.sqlite3")
+def crawl_state(tmp_path: Path) -> Iterator[sqlite3.Connection]:
+    with closing(open_crawl_state(tmp_path / "crawl_state.sqlite3")) as connection:
+        yield connection
 
 
 def test_enqueue_keeps_one_row_per_url(crawl_state: sqlite3.Connection) -> None:
@@ -101,9 +104,11 @@ def test_counts_saved_files_by_source_and_expected_content(crawl_state: sqlite3.
 
 def test_queue_survives_reopening_the_state_file(tmp_path: Path) -> None:
     state_path = tmp_path / "crawl_state.sqlite3"
-    enqueue_requests(open_crawl_state(state_path), [create_crawl_request(url="https://blog.example/1")])
+    with closing(open_crawl_state(state_path)) as first_connection:
+        enqueue_requests(first_connection, [create_crawl_request(url="https://blog.example/1")])
 
-    reopened_request = find_next_pending_request(open_crawl_state(state_path), TEST_SOURCE_NAME)
+    with closing(open_crawl_state(state_path)) as reopened_connection:
+        reopened_request = find_next_pending_request(reopened_connection, TEST_SOURCE_NAME)
 
     assert reopened_request is not None
     assert reopened_request.url == "https://blog.example/1"

@@ -1,4 +1,5 @@
 import json
+from contextlib import closing
 from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated
@@ -51,33 +52,33 @@ def run(
 ) -> None:
     """Crawl one source until its queue is empty, the request budget is used, or a site rate-limits us."""
     source = SOURCES_BY_NAME[source_name]
-    connection = open_crawl_state(state_db)
-    enqueue_requests(connection, source.build_seed_requests(seed_file))
-    if retry_failed:
-        reset_failed_requests(connection, source.name)
-    client = build_http_client(build_user_agent(contact))
-    context = CrawlContext(
-        source=source,
-        connection=connection,
-        client=client,
-        robots_policy=RobotsPolicy(client),
-        pacer=HostPacer(min_seconds_between_requests=source.min_seconds_between_requests),
-        dataset_dir=dataset_dir,
-    )
-    typer.echo(json.dumps(asdict(run_crawl(context, max_requests))))
+    with closing(open_crawl_state(state_db)) as connection, build_http_client(build_user_agent(contact)) as client:
+        enqueue_requests(connection, source.build_seed_requests(seed_file))
+        if retry_failed:
+            reset_failed_requests(connection, source.name)
+        context = CrawlContext(
+            source=source,
+            connection=connection,
+            client=client,
+            robots_policy=RobotsPolicy(client),
+            pacer=HostPacer(min_seconds_between_requests=source.min_seconds_between_requests),
+            dataset_dir=dataset_dir,
+        )
+        summary = run_crawl(context, max_requests)
+    typer.echo(json.dumps(asdict(summary)))
 
 
 @app.command()
 def status(state_db: Path = DEFAULT_STATE_DB) -> None:
     """Print request counts per source and saved file counts per expected content."""
-    connection = open_crawl_state(state_db)
-    requests_by_source = {
-        source_name: count_requests_by_status(connection, source_name) for source_name in list_source_names(connection)
-    }
-    saved_files = [
-        {"source_name": source_name, "expected_content": expected_content, "count": count}
-        for (source_name, expected_content), count in count_saved_files_by_expected_content(connection).items()
-    ]
+    with closing(open_crawl_state(state_db)) as connection:
+        requests_by_source = {
+            source_name: count_requests_by_status(connection, source_name) for source_name in list_source_names(connection)
+        }
+        saved_files = [
+            {"source_name": source_name, "expected_content": expected_content, "count": count}
+            for (source_name, expected_content), count in count_saved_files_by_expected_content(connection).items()
+        ]
     typer.echo(json.dumps({"requests": requests_by_source, "saved_files": saved_files}, indent=2))
 
 
