@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# Real photos stay local
+dataset/
+
 # Runtime output
 logs/
 models/

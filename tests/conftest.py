@@ -4,6 +4,7 @@ import pytest
 from image_factories import (
     VALID_NON_ISBN_EAN13,
     VALID_ISBN13,
+    create_accented_text_image,
     create_blank_image,
     create_ean13_image,
     create_text_image,
@@ -38,6 +39,11 @@ def non_isbn_barcode_image() -> np.ndarray:
 @pytest.fixture
 def isbn_text_image() -> np.ndarray:
     return create_text_image("ISBN 978-0-306-40615-7")
+
+
+@pytest.fixture
+def spanish_title_image() -> np.ndarray:
+    return create_accented_text_image("El Buscón")
 
 
 @pytest.fixture(scope="session")
