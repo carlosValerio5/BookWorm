@@ -78,8 +78,8 @@ def enqueue_requests(connection: sqlite3.Connection, requests: Iterable[CrawlReq
 def find_next_pending_request(connection: sqlite3.Connection, source_name: str) -> CrawlRequest | None:
     row = connection.execute(
         "SELECT url, source_name, purpose, depth, labels_json FROM crawl_requests"
-        " WHERE source_name = ? AND status = ? ORDER BY queue_position LIMIT 1",
-        (source_name, str(RequestStatus.PENDING)),
+        " WHERE source_name = ? AND status = ? ORDER BY purpose = ? DESC, queue_position LIMIT 1",
+        (source_name, str(RequestStatus.PENDING), str(RequestPurpose.DOWNLOAD)),
     ).fetchone()
     return None if row is None else build_request_from_row(row)
 
