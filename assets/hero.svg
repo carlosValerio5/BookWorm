@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-label="BookWorm: scan a book, get its ISBN">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f2a44"/>
+      <stop offset="1" stop-color="#3b2f4a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="360" rx="24" fill="url(#bg)"/>
+
+  <g transform="translate(110 90)">
+    <rect x="0" y="170" width="250" height="44" rx="6" fill="#e07a5f"/>
+    <rect x="18" y="124" width="220" height="44" rx="6" fill="#f2cc8f"/>
+    <rect x="6" y="78" width="236" height="44" rx="6" fill="#81b29a"/>
+    <rect x="30" y="32" width="200" height="44" rx="6" fill="#a8dadc"/>
+    <path d="M150 34 C150 0 190 -10 200 14" stroke="#9bd37a" stroke-width="18" fill="none" stroke-linecap="round"/>
+    <circle cx="203" cy="16" r="16" fill="#9bd37a"/>
+    <circle cx="208" cy="11" r="4" fill="#1f2a44"/>
+    <rect x="-14" y="-24" width="278" height="252" rx="4" fill="none" stroke="#00c800" stroke-width="4" stroke-dasharray="14 8"/>
+    <rect x="-14" y="-52" width="112" height="28" fill="#00c800"/>
+    <text x="-4" y="-32" font-family="Menlo, Consolas, monospace" font-size="18" fill="#10151f">book 0.91</text>
+  </g>
+
+  <text x="440" y="160" font-family="Georgia, 'Times New Roman', serif" font-size="92" font-weight="700" fill="#f4f1de">BookWorm</text>
+  <text x="444" y="215" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" fill="#d9d4c3">Snap a photo of a book, get its ISBN.</text>
+
+  <g transform="translate(444 250)" fill="#f4f1de">
+    <rect x="0" width="4" height="50"/><rect x="8" width="2" height="50"/><rect x="14" width="6" height="50"/>
+    <rect x="24" width="2" height="50"/><rect x="30" width="4" height="50"/><rect x="38" width="2" height="50"/>
+    <rect x="44" width="6" height="50"/><rect x="54" width="2" height="50"/><rect x="60" width="4" height="50"/>
+    <rect x="68" width="2" height="50"/><rect x="74" width="6" height="50"/><rect x="84" width="4" height="50"/>
+    <rect x="92" width="2" height="50"/><rect x="98" width="6" height="50"/><rect x="108" width="2" height="50"/>
+    <rect x="114" width="4" height="50"/><rect x="122" width="2" height="50"/><rect x="128" width="6" height="50"/>
+  </g>
+  <text x="600" y="287" font-family="Menlo, Consolas, monospace" font-size="24" fill="#f2cc8f">kind: isbn · 9780306406157</text>
+</svg>
