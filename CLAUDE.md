@@ -63,4 +63,6 @@ Here you'll record any issues we find along the way, this is how we keep improvi
 - T3 (2026-09-15): Stock YOLO (COCO) has a `book` class but no barcode class. Barcodes are read with `zxing-cpp`, not YOLO.
 - T4 (2026-09-15): `round(0.98765, 4)` is not guaranteed to be `0.9877` (float representation). Don't use half-way values in test fixtures.
 - T5 (2026-09-15): EasyOCR on Apple MPS warns `pin_memory ... not supported on MPS`. Harmless, ignore.
+- T6 (2026-09-15): Importing `ultralytics` replaces `PIL.Image.open` for the whole process. When a file fails to open, the replacement tries to install and import `pi-heif`, which leaks `ModuleNotFoundError` instead of the real error. Don't use `PIL.Image.open` in our code; decode HEIC with `pillow_heif.open_heif`.
+- T7 (2026-09-15): Pillow's default font has no accented glyphs (`ó` renders as a box). Synthetic text fixtures use DejaVu Sans (ships with matplotlib). Always look at a synthetic fixture image before trusting its RED.
 
