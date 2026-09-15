@@ -1,0 +1,26 @@
+# Changelog
+
+All notable changes to BookWorm are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version in `pyproject.toml` and a dated section below. See [Releasing](README.md#releasing).
+
+## [Unreleased]
+
+## [0.1.0] - 2026-09-15
+
+### Added
+- `bookworm scan` prints a JSON result that says whether a photo shows an ISBN, a cover, or neither (`kind`: `isbn`, `cover`, `unknown`).
+- `bookworm annotate` also saves a copy of the photo with boxes drawn around books, barcodes and text.
+- ISBNs are read from EAN-13 barcodes with zxing-cpp. A barcode only counts if it starts with 978 or 979 and its checksum is valid.
+- ISBN-10 and ISBN-13 numbers printed as text are found in the OCR output, even when OCR splits them over two lines.
+- Book detection with YOLO26n, using the COCO `book` class.
+- Text recognition with EasyOCR in Spanish and English, so accents like "Buscón" survive (D10).
+- Text below 0.4 OCR confidence is dropped (D9).
+- HEIC photos from iPhones load upright with the right colors (B1).
+- YOLO and OCR run on a copy shrunk to 1280px on the long side, while barcodes are still read at full resolution. Boxes are reported in the original photo's coordinates (D11).
+- JSON logs to stderr and `logs/bookworm.jsonl`. Every line has a timestamp, level, service, call and duration, and all lines from one photo share a `scan_id`.
+- README with a banner, a demo scan and a pipeline diagram.
+- This changelog, and a CI check that rejects release tags that aren't `vMAJOR.MINOR.PATCH` or don't match `pyproject.toml` and this file.
+
+[Unreleased]: https://github.com/carlosValerio5/BookWorm/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/carlosValerio5/BookWorm/releases/tag/v0.1.0
