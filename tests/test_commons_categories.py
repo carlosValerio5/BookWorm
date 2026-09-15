@@ -80,7 +80,9 @@ def test_category_page_queues_each_photo_file_page_once() -> None:
 
 
 def test_category_page_skips_files_that_are_not_photos() -> None:
-    html = create_category_page_html("/wiki/File:Diagram.svg", "/wiki/File:Talk.ogg", "/wiki/File:Scan.pdf")
+    html = create_category_page_html(
+        "/wiki/File:Diagram.svg", "/wiki/File:Talk.ogg", "/wiki/File:Scan.pdf", "/wiki/File:ISBN_Details-ar.png"
+    )
 
     assert extract_from_page(CATEGORY_URL, html, depth=0) == []
 
