@@ -140,7 +140,11 @@ Photos checked by eye:
 | 33 | Pending downloads are taken before pages queued earlier | `test_downloads_are_taken_before_pages_queued_earlier` | unit | PASS |
 
 ## Known gaps (new)
-- D33: Commons PNGs are often diagrams.
-- D34: `Book sales` is labeled `cover` but gives scene photos.
-- 3840px thumbnails are ~1 MB each; 1280px would be ~4× smaller.
+- 3840px thumbnails are ~1 MB each; kept on purpose (T8: barcodes stop decoding at 1280px).
 - Photos saved before F11 keep their old labels.
+
+## User decisions (2026-09-15)
+- D33 resolved: Commons skips `.png` files. RED `1a22935` (`ISBN_Details-ar.png` still queued), GREEN: **154 passed**.
+- D34 resolved: `Book sales` removed from `crawler_seeds/commons_categories.toml`.
+- Local queue: 6 pending requests marked `skipped` (1 `dropped_by_user:book_sales`, 5 `png_not_collected`).
+- Already saved and not deleted: 10 `Book sales` photos, 4 ISBN `.png` files.
