@@ -1,0 +1,19 @@
+name: Release tag
+
+on:
+  push:
+    tags: ["**"]
+
+permissions:
+  contents: read
+
+jobs:
+  check-release-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - name: Tag is vMAJOR.MINOR.PATCH and matches pyproject.toml and CHANGELOG.md
+        env:
+          PYTHONPATH: src
+        run: uv run --no-project --python 3.13 --with structlog python scripts/check_release_tag.py "$GITHUB_REF_NAME"

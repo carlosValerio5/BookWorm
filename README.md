@@ -177,6 +177,23 @@ A `cover` result gives you the text on the cover. It doesn't tell you the title 
 - [ ] Save finds to a local database
 - [ ] An agent that uses tool calls to research a book for you
 
+## Releasing
+
+Versions follow [SemVer](https://semver.org), and a release tag is always `vMAJOR.MINOR.PATCH`. Tags like `0.2.0`, `v0.2` or `v0.2.0-rc.1` are rejected. Every release is listed in [CHANGELOG.md](CHANGELOG.md).
+
+1. Bump the version with `uv version --bump minor` (or `patch`, `major`).
+2. In `CHANGELOG.md`, move the entries under `[Unreleased]` into a new `## [X.Y.Z] - YYYY-MM-DD` section and update the compare links at the bottom.
+3. Run `uv run pytest -m "not slow"`. It fails if the changelog has no section for the new version.
+4. Merge to `main`, then check, tag and push from the merge commit:
+
+```bash
+uv run python scripts/check_release_tag.py vX.Y.Z
+git tag -a vX.Y.Z -m "vX.Y.Z"
+git push origin vX.Y.Z
+```
+
+The `Release tag` workflow runs the same check on every tag pushed to GitHub and fails when the tag, `pyproject.toml` and the changelog disagree.
+
 ## Contributing
 
 The code conventions and the list of mistakes we've already made are in [CLAUDE.md](CLAUDE.md). Read it before opening a PR.

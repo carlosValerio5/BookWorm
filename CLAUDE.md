@@ -41,6 +41,12 @@ Logging is the single most improtant part of a good software piece, if we can't 
 Use a good logging library and consider plugging in tools like grafana.
 In the log event, include important information like, date, the call made, and which service made the call.
 
+## VERSIONING
+- Versions follow SemVer. Release tags are annotated, named `vMAJOR.MINOR.PATCH`, and made on `main`. No other tag names.
+- The tag, the `pyproject.toml` version and a dated `CHANGELOG.md` section must match. `scripts/check_release_tag.py` checks this locally and in CI.
+- Every user-facing change adds a line under `[Unreleased]` in `CHANGELOG.md` in the same PR.
+- Bump the version with `uv version --bump`, not by hand.
+
 ## MultiAgent Workloads
 For multiagent workloads, always use worktrees.
 The structure should be as follows:
