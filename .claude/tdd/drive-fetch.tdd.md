@@ -105,3 +105,31 @@ Known gap carried over from the live test: re-fetching an individual Drive file 
 New checkpoint commits on `main`:
 - `test: add reproducer for Drive filename collisions (RED)` — `150a26c`
 - `fix: prefix colliding Drive file names with their file ID` (GREEN) — `74b2cc3`
+
+## Follow-up 2: individual per-file downloads triggered Drive's own throttle
+
+Live-verifying the collision fix (previous section) against the same real folder surfaced a second, more serious problem: that fix always called `gdown.download(id=...)` individually, once per file (32 calls). Two issues came from that, found in this order:
+
+1. A single individual-file failure raised `DriveDownloadError` and aborted the whole run immediately, saving nothing past the first failure. Fixed by logging and continuing instead (matches `gdown.download_folder`'s own internal per-file behavior, confirmed by reading its source: `except DownloadError: ... continue`). Commits `6626a27` (RED) / `1ee9d90` (GREEN).
+2. Even after that fix, a full live rerun making all 32 individual requests failed on **every single file**, including ones that had downloaded successfully in the very first (pre-fix) run — evidence that Google's Drive "too many accesses" throttle triggers on the volume/pattern of individual `uc?id=` requests from one source in a short window, not on a specific file ID being hit repeatedly (which was the original, incorrect hypothesis).
+
+Fix: hybrid strategy. Use the batched `gdown.download_folder()` call (the reliable path, proven to complete the whole 32-file folder in one run) for the normal case, and only fall back to individual `gdown.download()` calls for entries whose name actually collides with another entry's name — 7 requests instead of 32 on the real folder. Commits `bd239b9` (RED) / `e778f10` (GREEN).
+
+RED (before the hybrid fix):
+```
+$ uv run pytest tests/test_drive_download.py -q
+4 failed, 5 passed in 0.76s
+```
+
+GREEN (after):
+```
+$ uv run pytest tests/test_drive_download.py tests/test_cli.py -q
+.................                                                        [100%]
+17 passed in 2.60s
+$ uv run pytest -q -m "not slow"
+253 passed, 37 deselected, 2 warnings in 0.73s
+$ uv run pytest tests/test_drive_download.py tests/test_cli.py -q --cov=bookworm.drive_download --cov-report=term-missing
+src/bookworm/drive_download.py      53      0   100%
+```
+
+Final live verification against the real folder was **not** re-run after this fix: by this point the same IP/session had made dozens of rapid requests to that folder within roughly an hour while debugging the two problems above, and Google's throttle was still visibly active (the full-batch call itself, which had worked cleanly on the very first attempt of the day, could plausibly be affected too by now). Re-running immediately would not have distinguished "still broken" from "still throttled from testing," and risked extending the cooldown further. Correctness for the hybrid strategy rests on the unit tests above (100% coverage, all paths — batch success, batch-then-collision-refetch, missing-file-after-batch, collision-refetch failure, listing failure, batch failure — verified with mocked `gdown` calls). Recommended follow-up: the user reruns `bookworm fetch-drive` themselves after Drive's throttle has cooled down (untimed; likely on the order of tens of minutes to a few hours) to confirm end-to-end against the real folder.
