@@ -10,6 +10,7 @@ requires-python = ">=3.13"
 dependencies = [
     "easyocr>=1.7.2",
     "fastapi>=0.141.1",
+    "gdown>=6.2.0",
     "httpx>=0.28.1",
     "imagesize>=2.0.1",
     "pillow-heif>=1.7.0",
