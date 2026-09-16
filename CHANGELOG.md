@@ -21,6 +21,9 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 - The annotator is redesigned in the style of Cursor's website: a warm dark window with the photo path in the title bar, a larger photo, photos grouped into "To label" and "Labeled" with box counts, a status bar with mode, box type, cursor pixels and a labeling timer, and box tags that avoid covering other boxes. Keyboard shortcuts and the class-first lock are unchanged.
 - `/api/photos` returns each photo's `box_count`.
 
+### Fixed
+- Dragging a selected box's corner handle now resizes that box instead of drawing a new one on top of it (B2).
+
 ## [0.1.0] - 2026-09-15
 
 ### Added
