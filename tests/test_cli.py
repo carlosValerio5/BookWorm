@@ -1,4 +1,5 @@
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +12,7 @@ from typer.testing import CliRunner
 from bookworm import cli
 from bookworm.cli import ImageWriteError, app, write_annotated_image
 from bookworm.drive_download import DriveDownloadError
+from bookworm.yolo_dataset import YoloDatasetSummary
 
 runner = CliRunner()
 
@@ -81,6 +83,94 @@ def test_fetch_drive_reports_a_failed_download_with_a_nonzero_exit(monkeypatch: 
     result = runner.invoke(app, ["fetch-drive", FOLDER_URL])
 
     assert result.exit_code != 0
+
+
+def test_build_yolo_dataset_command_prints_the_summary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    photos_dir = tmp_path / "photos"
+    photos_dir.mkdir()
+    fake_summary = YoloDatasetSummary(
+        train_count=5,
+        val_count=1,
+        skipped_unlabeled_count=2,
+        output_dir=str(tmp_path / "yolo"),
+        data_yaml_path=str(tmp_path / "yolo" / "data.yaml"),
+    )
+    captured_calls: list[tuple[Path, Path, Path]] = []
+
+    def fake_build_yolo_dataset(photos_dir_arg: Path, labels_dir_arg: Path, output_dir_arg: Path) -> YoloDatasetSummary:
+        captured_calls.append((photos_dir_arg, labels_dir_arg, output_dir_arg))
+        return fake_summary
+
+    monkeypatch.setattr(cli, "build_yolo_dataset", fake_build_yolo_dataset)
+
+    result = runner.invoke(app, ["build-yolo-dataset", str(photos_dir)])
+
+    assert result.exit_code == 0, result.output
+    assert captured_calls == [(photos_dir, cli.DEFAULT_LABELS_DIRECTORY, cli.DEFAULT_YOLO_DATASET_DIR)]
+    assert json.loads(result.stdout) == asdict(fake_summary)
+
+
+def test_train_yolo_command_uses_default_options(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    dataset_yaml = tmp_path / "data.yaml"
+    dataset_yaml.write_text("placeholder")
+    best_weights_path = tmp_path / "best.pt"
+    captured_calls: list[dict[str, object]] = []
+
+    def fake_run_yolo_fine_tune(dataset_yaml_arg: Path, **kwargs: object) -> Path:
+        captured_calls.append({"dataset_yaml": dataset_yaml_arg, **kwargs})
+        return best_weights_path
+
+    monkeypatch.setattr(cli, "run_yolo_fine_tune", fake_run_yolo_fine_tune)
+
+    result = runner.invoke(app, ["train-yolo", str(dataset_yaml)])
+
+    assert result.exit_code == 0, result.output
+    assert captured_calls == [
+        {
+            "dataset_yaml": dataset_yaml,
+            "base_weights": cli.DEFAULT_BASE_WEIGHTS,
+            "epochs": cli.DEFAULT_TRAINING_EPOCHS,
+            "image_size": cli.DEFAULT_TRAINING_IMAGE_SIZE,
+        }
+    ]
+    assert json.loads(result.stdout) == {"best_weights": str(best_weights_path)}
+
+
+def test_train_yolo_command_passes_through_explicit_options(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    dataset_yaml = tmp_path / "data.yaml"
+    dataset_yaml.write_text("placeholder")
+    best_weights_path = tmp_path / "best.pt"
+    captured_calls: list[dict[str, object]] = []
+
+    def fake_run_yolo_fine_tune(dataset_yaml_arg: Path, **kwargs: object) -> Path:
+        captured_calls.append({"dataset_yaml": dataset_yaml_arg, **kwargs})
+        return best_weights_path
+
+    monkeypatch.setattr(cli, "run_yolo_fine_tune", fake_run_yolo_fine_tune)
+
+    result = runner.invoke(
+        app,
+        [
+            "train-yolo",
+            str(dataset_yaml),
+            "--epochs",
+            "10",
+            "--imgsz",
+            "320",
+            "--base-weights",
+            str(tmp_path / "custom.pt"),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured_calls == [
+        {
+            "dataset_yaml": dataset_yaml,
+            "base_weights": tmp_path / "custom.pt",
+            "epochs": 10,
+            "image_size": 320,
+        }
+    ]
 
 
 def test_write_annotated_image_raises_when_output_folder_is_missing(tmp_path: Path, blank_image: np.ndarray) -> None:
