@@ -7,6 +7,8 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 ## [Unreleased]
 
 ### Added
+- Mobile product and design docs (`bookworm-mobile/PRODUCT.md`, `bookworm-mobile/DESIGN.md`): warm dark "Viewfinder" north star, screen map, and shared tokens in `bookworm-mobile/src/constants/theme.ts`.
+- Mobile UI: warm dark scan and biblioteca screens with vintage gold (`#f2cc8f`) star accents, gold-framed camera, and token-driven styling.
 - `bookworm-crawl run <source>` collects candidate photos for YOLO fine-tuning. A run picks up where the last one stopped, obeys robots.txt, waits between requests to each site, and stops on 429. State is kept in `dataset/crawled/crawl_state.sqlite3`.
 - `bookworm-crawl status` prints request counts per source and saved photos per hint label.
 - `blog_pages` source: approved book-haul blogs from `crawler_seeds/blog_pages.toml`, photos from 600px.
@@ -23,6 +25,9 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 - Terminal logs are readable `event key=value` lines, colored in a real terminal. `logs/bookworm.jsonl` still gets every event as JSON.
 - The annotator is redesigned in the style of Cursor's website: a warm dark window with the photo path in the title bar, a larger photo, photos grouped into "To label" and "Labeled" with box counts, a status bar with mode, box type, cursor pixels and a labeling timer, and box tags that avoid covering other boxes. Keyboard shortcuts and the class-first lock are unchanged.
 - `/api/photos` returns each photo's `box_count`.
+
+### Fixed
+- Dragging a selected box's corner handle now resizes that box instead of drawing a new one on top of it (B2).
 
 ## [0.1.0] - 2026-09-15
 
