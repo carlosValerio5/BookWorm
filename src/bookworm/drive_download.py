@@ -48,6 +48,7 @@ def download_drive_folder(folder_url: str, output_dir: Path) -> list[Path]:
             try:
                 gdown.download(id=entry.id, output=str(local_path), quiet=False, use_cookies=False, resume=True)
             except gdown.exceptions.DownloadError as error:
-                raise DriveDownloadError(f"Could not download file {entry.id!r} ({entry.path!r}): {error}") from error
+                logger.warning("drive_file_download_failed", file_id=entry.id, file_name=entry.path, error=str(error))
+                continue
             downloaded_file_paths.append(local_path)
         return downloaded_file_paths
