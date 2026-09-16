@@ -12,6 +12,7 @@ import uvicorn
 from bookworm.annotation_drawing import draw_scan_result
 from bookworm.annotator.web_app import create_annotator_app
 from bookworm.book_detection import load_book_detector
+from bookworm.drive_download import DriveDownloadError, download_drive_folder
 from bookworm.image_loading import load_image
 from bookworm.logging_setup import configure_logging, log_call
 from bookworm.scan_classification import scan_image
@@ -28,6 +29,7 @@ ExistingDirectoryPath = Annotated[Path, typer.Argument(exists=True, file_okay=Fa
 ANNOTATOR_HOST = "127.0.0.1"
 DEFAULT_ANNOTATOR_PORT = 8765
 DEFAULT_LABELS_DIRECTORY = Path("labels")
+DEFAULT_DRIVE_OUTPUT_DIR = Path("dataset/drive")
 
 
 class ImageWriteError(Exception):
@@ -63,6 +65,19 @@ def annotator(
         url=f"http://{ANNOTATOR_HOST}:{port}",
     )
     uvicorn.run(create_annotator_app(photos_dir, labels_dir), host=ANNOTATOR_HOST, port=port, log_config=None)
+
+
+@app.command(name="fetch-drive")
+def fetch_drive(
+    folder_url: str,
+    output_dir: Annotated[Path, typer.Option(help="Folder where downloaded photos are saved.")] = DEFAULT_DRIVE_OUTPUT_DIR,
+) -> None:
+    """Download every photo in a public Google Drive folder, ready for the annotator."""
+    try:
+        downloaded_file_paths = download_drive_folder(folder_url, output_dir)
+    except DriveDownloadError as error:
+        raise typer.Exit(code=1) from error
+    typer.echo(json.dumps({"downloaded": len(downloaded_file_paths), "output_dir": str(output_dir)}))
 
 
 def write_annotated_image(output_path: Path, annotated_image: np.ndarray) -> None:
