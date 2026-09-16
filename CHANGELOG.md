@@ -7,6 +7,8 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 ## [Unreleased]
 
 ### Added
+- Mobile product and design docs (`bookworm-mobile/PRODUCT.md`, `bookworm-mobile/DESIGN.md`): warm dark "Viewfinder" north star, screen map, and shared tokens in `bookworm-mobile/src/constants/theme.ts`.
+- Mobile UI: warm dark scan and biblioteca screens with vintage gold (`#f2cc8f`) star accents, gold-framed camera, and token-driven styling.
 - `bookworm-crawl run <source>` collects candidate photos for YOLO fine-tuning. A run picks up where the last one stopped, obeys robots.txt, waits between requests to each site, and stops on 429. State is kept in `dataset/crawled/crawl_state.sqlite3`.
 - `bookworm-crawl status` prints request counts per source and saved photos per hint label.
 - `blog_pages` source: approved book-haul blogs from `crawler_seeds/blog_pages.toml`, photos from 600px.

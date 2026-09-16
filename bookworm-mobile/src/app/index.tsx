@@ -5,6 +5,10 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
 import { realBookScan } from '../services/api';
 import { useBooks } from '../context/BookContext';
+import { StarAccent } from '@/components/star-accent';
+import { BookWormPalette, Colors, Radius, Spacing } from '@/constants/theme';
+
+const c = Colors.dark;
 
 export default function HomeScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -41,13 +45,13 @@ export default function HomeScreen() {
           setFoundBook(resultado.data);
           setIsCameraActive(false);
         } else {
-          setErrorMessage(resultado.message || "No se pudo reconocer el libro. Intenta enfocar mejor la portada.");
+          setErrorMessage(resultado.message || 'No se pudo reconocer el libro. Intenta enfocar mejor la portada.');
           setIsCameraActive(false);
         }
       }
     } catch (error) {
-      console.error("Error al capturar:", error);
-      setErrorMessage("Error al procesar la foto. Intenta de nuevo.");
+      console.error('Error al capturar:', error);
+      setErrorMessage('Error al procesar la foto. Intenta de nuevo.');
       setIsCameraActive(false);
     } finally {
       setLoading(false);
@@ -65,138 +69,254 @@ export default function HomeScreen() {
 
       addBook(bookToSave);
       setFoundBook(null);
-      alert("¡Libro guardado en tu biblioteca!");
+      alert('¡Libro guardado en tu biblioteca!');
     }
   };
 
   return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
-
-          <View style={styles.header}>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <View style={styles.titleRow}>
+            <StarAccent size={12} dim />
             <Text style={styles.title}>BookWorm</Text>
+            <StarAccent size={12} dim />
+          </View>
+          <View style={styles.versionBadge}>
             <Text style={styles.version}>v0.1.0</Text>
           </View>
+        </View>
 
-          {errorMessage && (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorBannerText}>⚠️ {errorMessage}</Text>
-              </View>
-          )}
+        {errorMessage && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{errorMessage}</Text>
+          </View>
+        )}
 
-          {!isCameraActive ? (
-              <Pressable style={styles.cameraBoxPlaceholder} onPress={encenderCamara}>
-                <View style={styles.dot} />
-                <Text style={styles.cameraTitle}>Escanear Portada o Contraportada</Text>
-                <Text style={styles.cameraSubtitle}>Toca aquí para abrir la cámara</Text>
-              </Pressable>
-          ) : (
-              <View style={styles.cameraBoxActive}>
-                {permission?.granted ? (
-                    <>
-                      <CameraView style={styles.camera} facing="back" ref={cameraRef} />
-                      <Pressable style={styles.cameraOverlayAbsolute} onPress={escanearLibroReal}>
-                        {loading ? (
-                            <ActivityIndicator size="large" color="#FFF" />
-                        ) : (
-                            <Text style={styles.scanHintText}>Enfoca el libro y toca para identificar...</Text>
-                        )}
-                      </Pressable>
-                    </>
-                ) : (
-                    <View style={styles.cameraBoxPlaceholder}>
-                      <Text style={styles.infoText}>Falta permiso de cámara</Text>
+        {!isCameraActive ? (
+          <Pressable style={styles.cameraBoxPlaceholder} onPress={encenderCamara}>
+            <StarAccent size={22} />
+            <View style={styles.liveDot} />
+            <Text style={styles.cameraTitle}>Escanear portada o contraportada</Text>
+            <Text style={styles.cameraSubtitle}>Toca aquí para abrir la cámara</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.cameraBoxActive}>
+            {permission?.granted ? (
+              <>
+                <CameraView style={styles.camera} facing="back" ref={cameraRef} />
+                <View style={styles.cameraGoldFrame} pointerEvents="none" />
+                <Pressable style={styles.cameraOverlayAbsolute} onPress={escanearLibroReal}>
+                  {loading ? (
+                    <ActivityIndicator size="large" color={BookWormPalette.gold} />
+                  ) : (
+                    <View style={styles.scanHintPill}>
+                      <StarAccent size={11} />
+                      <Text style={styles.scanHintText}>Enfoca el libro y toca para identificar</Text>
                     </View>
-                )}
-              </View>
-          )}
-
-          <Modal visible={!!foundBook} transparent animationType="fade">
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalCard}>
-
-                {foundBook?.coverImage && (
-                    <Image source={{ uri: foundBook.coverImage }} style={styles.modalCoverImage} />
-                )}
-
-                <Text style={styles.modalPre}>¡Encontramos una coincidencia!</Text>
-                <Text style={styles.modalTitle}>{foundBook?.title}</Text>
-                <Text style={styles.modalAuthor}>{foundBook?.author}</Text>
-                <Text style={styles.modalIsbn}>ISBN: {foundBook?.isbn}</Text>
-
-                <Pressable style={styles.saveButton} onPress={guardarLibro}>
-                  <Text style={styles.saveButtonText}>Guardar en mi biblioteca</Text>
+                  )}
                 </Pressable>
-
-                <Pressable onPress={() => setFoundBook(null)} style={{ marginTop: 12 }}>
-                  <Text style={{ color: '#7B9EAD', textAlign: 'center' }}>Cancelar</Text>
-                </Pressable>
+              </>
+            ) : (
+              <View style={styles.cameraBoxPlaceholder}>
+                <Text style={styles.infoText}>Falta permiso de cámara</Text>
               </View>
+            )}
+          </View>
+        )}
+
+        <Modal visible={!!foundBook} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              {foundBook?.coverImage && (
+                <Image source={{ uri: foundBook.coverImage }} style={styles.modalCoverImage} />
+              )}
+
+              <View style={styles.modalPreRow}>
+                <StarAccent size={13} />
+                <Text style={styles.modalPre}>Coincidencia encontrada</Text>
+                <StarAccent size={13} />
+              </View>
+              <Text style={styles.modalTitle}>{foundBook?.title}</Text>
+              <Text style={styles.modalAuthor}>{foundBook?.author}</Text>
+              <Text style={styles.modalIsbn}>ISBN {foundBook?.isbn}</Text>
+
+              <Pressable style={styles.saveButton} onPress={guardarLibro}>
+                <Text style={styles.saveButtonText}>Guardar en mi biblioteca</Text>
+              </Pressable>
+
+              <Pressable onPress={() => setFoundBook(null)} style={styles.cancelPress}>
+                <Text style={styles.cancelText}>Cancelar</Text>
+              </Pressable>
             </View>
-          </Modal>
-
-        </SafeAreaView>
-      </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EAF6F9' },
-  safeArea: { flex: 1, paddingHorizontal: 20, justifyContent: 'space-between', paddingVertical: 15 },
+  container: { flex: 1, backgroundColor: c.background },
+  safeArea: {
+    flex: 1,
+    paddingHorizontal: Spacing.screen,
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.pane,
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', fontFamily: 'serif', color: '#0A2540' },
-  version: { color: '#7B9EAD', fontSize: 14 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  title: { fontSize: 22, fontWeight: '500', color: c.text },
+  versionBadge: {
+    borderWidth: 1,
+    borderColor: c.goldLine,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.pill,
+  },
+  version: { color: c.gold, fontSize: 12, fontVariant: ['tabular-nums'] },
 
-  errorBanner: { backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#F87171', padding: 10, borderRadius: 12 },
-  errorBannerText: { color: '#991B1B', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  errorBanner: {
+    backgroundColor: 'rgba(207, 45, 86, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(207, 45, 86, 0.35)',
+    padding: Spacing.md,
+    borderRadius: Radius.row,
+    marginTop: Spacing.md,
+  },
+  errorBannerText: {
+    color: 'rgba(237, 236, 236, 0.92)',
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
   cameraBoxPlaceholder: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#82C1D4',
+    backgroundColor: c.backgroundElement,
+    borderWidth: 1,
+    borderColor: c.goldLine,
     borderStyle: 'dashed',
-    borderRadius: 24,
+    borderRadius: Radius.frame,
     width: '100%',
     height: '90%',
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
+    gap: Spacing.sm,
   },
-  dot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#60A5FA', marginBottom: 14 },
-  cameraTitle: { fontSize: 19, fontWeight: 'bold', color: '#0A2540', marginBottom: 6, textAlign: 'center' },
-  cameraSubtitle: { color: '#7B9EAD', fontSize: 13, textAlign: 'center' },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: BookWormPalette.gold,
+    marginBottom: Spacing.xs,
+  },
+  cameraTitle: {
+    fontSize: 17,
+    fontWeight: '500',
+    color: c.text,
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.xs,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.group,
+  },
+  cameraSubtitle: { color: c.textSecondary, fontSize: 13, textAlign: 'center' },
 
   cameraBoxActive: {
     width: '100%',
     height: '90%',
-    borderRadius: 24,
+    borderRadius: Radius.frame,
     overflow: 'hidden',
     alignSelf: 'center',
-    borderWidth: 2,
-    borderColor: '#82C1D4',
-    position: 'relative'
+    borderWidth: 1,
+    borderColor: c.border,
+    position: 'relative',
   },
   camera: { flex: 1 },
+  cameraGoldFrame: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1,
+    borderColor: BookWormPalette.goldLine,
+    borderRadius: Radius.frame,
+    margin: Spacing.md,
+  },
   cameraOverlayAbsolute: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    justifyContent: 'center',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(20, 18, 11, 0.2)',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    paddingBottom: Spacing.group,
     zIndex: 10,
   },
-  scanHintText: { color: '#FFF', backgroundColor: 'rgba(0,0,0,0.65)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, fontSize: 13, fontWeight: '500' },
-  infoText: { color: '#7B9EAD', fontSize: 13, lineHeight: 18, textAlign: 'center', paddingHorizontal: 10 },
+  scanHintPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: 'rgba(20, 18, 11, 0.75)',
+    borderWidth: 1,
+    borderColor: c.goldLine,
+    paddingHorizontal: Spacing.pane,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.pill,
+  },
+  scanHintText: { color: c.text, fontSize: 13, fontWeight: '500' },
+  infoText: {
+    color: c.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.md,
+  },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalCard: { backgroundColor: '#FFF', width: '100%', borderRadius: 20, padding: 24, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.2, elevation: 5 },
-  modalCoverImage: { width: 100, height: 140, borderRadius: 8, marginBottom: 16, backgroundColor: '#E2E8F0' },
-  modalPre: { fontSize: 12, color: '#607D8B', fontWeight: '600', marginBottom: 8 },
-  modalTitle: { fontSize: 22, fontFamily: 'serif', fontWeight: 'bold', color: '#0A2540', textAlign: 'center', marginBottom: 4 },
-  modalAuthor: { fontSize: 16, color: '#4A5568', marginBottom: 12, textAlign: 'center' },
-  modalIsbn: { fontSize: 12, fontFamily: 'monospace', color: '#A0AEC0', marginBottom: 24 },
-  saveButton: { backgroundColor: '#1B2635', width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  saveButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(20, 18, 11, 0.72)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: c.backgroundElement,
+    width: '100%',
+    borderTopLeftRadius: Radius.sheet,
+    borderTopRightRadius: Radius.sheet,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderBottomWidth: 0,
+    padding: Spacing.screen,
+    paddingBottom: Spacing.group + 8,
+    alignItems: 'center',
+  },
+  modalCoverImage: {
+    width: 100,
+    height: 140,
+    borderRadius: Radius.row,
+    marginBottom: Spacing.pane,
+    backgroundColor: c.backgroundSelected,
+    borderWidth: 1,
+    borderColor: c.goldLine,
+  },
+  modalPreRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
+  modalPre: { fontSize: 12, color: c.gold, fontWeight: '500', letterSpacing: 0.3 },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: c.text,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+  modalAuthor: { fontSize: 15, color: c.textSecondary, marginBottom: Spacing.md, textAlign: 'center' },
+  modalIsbn: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+    color: c.textTertiary,
+    marginBottom: Spacing.screen,
+  },
+  saveButton: {
+    backgroundColor: c.primaryButtonFill,
+    width: '100%',
+    paddingVertical: Spacing.pane,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+  },
+  saveButtonText: { color: c.primaryButtonText, fontWeight: '500', fontSize: 16 },
+  cancelPress: { marginTop: Spacing.pane },
+  cancelText: { color: c.textSecondary, textAlign: 'center', fontSize: 14 },
 });
