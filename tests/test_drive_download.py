@@ -118,16 +118,20 @@ def test_download_drive_folder_raises_when_listing_fails(tmp_path: Path, monkeyp
         download_drive_folder(FOLDER_URL, tmp_path / "drive")
 
 
-def test_download_drive_folder_raises_when_a_file_fails_to_download(
+def test_download_drive_folder_skips_a_failed_file_and_keeps_going(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    entries = [build_entry("id-a", "cover.jpg")]
+    output_dir = tmp_path / "drive"
+    entries = [build_entry("id-a", "bad.jpg"), build_entry("id-b", "good.jpg")]
     monkeypatch.setattr(gdown, "download_folder", lambda **kwargs: entries)
 
     def fake_download(**kwargs: object) -> str:
-        raise gdown.exceptions.DownloadError("too many accesses")
+        if kwargs["id"] == "id-a":
+            raise gdown.exceptions.DownloadError("too many accesses")
+        return str(kwargs["output"])
 
     monkeypatch.setattr(gdown, "download", fake_download)
 
-    with pytest.raises(DriveDownloadError):
-        download_drive_folder(FOLDER_URL, tmp_path / "drive")
+    result = download_drive_folder(FOLDER_URL, output_dir)
+
+    assert result == [output_dir / "good.jpg"]
