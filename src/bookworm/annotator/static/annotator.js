@@ -16,6 +16,7 @@ const BOX_TYPE_SHORTCUTS = [
 
 const BOX_TYPES_WITHOUT_TEXT = new Set(["barcode"]);
 const MIN_DRAWN_BOX_CANVAS_PIXELS = 4;
+const RESIZE_HANDLE_HIT_RADIUS_CANVAS_PIXELS = 6;
 const WELL_PADDING_PIXELS = 12;
 const CHIP_HEIGHT_PIXELS = 18;
 const CHIP_PADDING_PIXELS = 6;
@@ -132,10 +133,6 @@ function currentPhotoScale() {
   return photoElement.clientWidth === 0 ? 1 : state.photoWidth / photoElement.clientWidth;
 }
 
-function clamp(value, minimum, maximum) {
-  return Math.min(Math.max(value, minimum), maximum);
-}
-
 function toPhotoPixels(canvasPoint, scale) {
   return {
     x: clamp(Math.round(canvasPoint.x * scale), 0, state.photoWidth),
@@ -162,15 +159,6 @@ function pointerToPhotoPixels(pointerEvent) {
   return toPhotoPixels(canvasPoint, currentPhotoScale());
 }
 
-function boxFromCorners(startPoint, endPoint) {
-  return {
-    x_min: Math.min(startPoint.x, endPoint.x),
-    y_min: Math.min(startPoint.y, endPoint.y),
-    x_max: Math.max(startPoint.x, endPoint.x),
-    y_max: Math.max(startPoint.y, endPoint.y),
-  };
-}
-
 function boxContains(outerBox, innerBox) {
   return outerBox.x_min <= innerBox.x_min && outerBox.y_min <= innerBox.y_min && outerBox.x_max >= innerBox.x_max && outerBox.y_max >= innerBox.y_max;
 }
@@ -191,6 +179,12 @@ function findTopBoxIndexAt(photoPoint) {
   return state.boxes.findLastIndex(
     ({ box }) => photoPoint.x >= box.x_min && photoPoint.x <= box.x_max && photoPoint.y >= box.y_min && photoPoint.y <= box.y_max,
   );
+}
+
+function resizeHandleAtPointer(photoPoint, boxIndex, scale) {
+  const rectangle = toCanvasPixels(state.boxes[boxIndex].box, scale);
+  const canvasPoint = toCanvasPoint(photoPoint, scale);
+  return findResizeHandle(canvasPoint, rectangle, RESIZE_HANDLE_HIT_RADIUS_CANVAS_PIXELS);
 }
 
 function isDrawnBoxBigEnough(photoBox) {
@@ -753,11 +747,19 @@ function startDrag(pointerEvent) {
     return;
   }
   const photoPoint = pointerToPhotoPixels(pointerEvent);
+  const scale = currentPhotoScale();
+  const resizeHandle = state.selectedBoxIndex === null ? null : resizeHandleAtPointer(photoPoint, state.selectedBoxIndex, scale);
   const boxIndex = findTopBoxIndexAt(photoPoint);
+  const dragMode = chooseDragMode({ selectedBoxIndex: state.selectedBoxIndex, resizeHandle, boxIndexAtPoint: boxIndex });
   canvasElement.setPointerCapture(pointerEvent.pointerId);
+  if (dragMode === "resize") {
+    state.drag = { mode: "resize", handle: resizeHandle, boxIndex: state.selectedBoxIndex, originalBox: { ...state.boxes[state.selectedBoxIndex].box } };
+    renderAll();
+    return;
+  }
   state.selectedBoxIndex = boxIndex === -1 ? null : boxIndex;
   state.drag =
-    boxIndex === -1
+    dragMode === "draw"
       ? { mode: "draw", startPoint: photoPoint, currentPoint: photoPoint }
       : { mode: "move", startPoint: photoPoint, boxIndex, originalBox: { ...state.boxes[boxIndex].box } };
   renderAll();
@@ -787,6 +789,9 @@ function continueDrag(pointerEvent) {
   const photoPoint = pointerToPhotoPixels(pointerEvent);
   if (state.drag.mode === "draw") {
     state.drag.currentPoint = photoPoint;
+  } else if (state.drag.mode === "resize") {
+    state.boxes[state.drag.boxIndex].box = resizeBox(state.drag.originalBox, state.drag.handle, photoPoint);
+    markChanged();
   } else {
     const offsetX = photoPoint.x - state.drag.startPoint.x;
     const offsetY = photoPoint.y - state.drag.startPoint.y;
