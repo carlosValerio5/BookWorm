@@ -18,6 +18,11 @@ from bookworm.logging_setup import configure_logging, log_call
 from bookworm.scan_classification import scan_image
 from bookworm.scan_types import ScanResult
 from bookworm.text_recognition import load_text_reader
+from bookworm.yolo_dataset import build_yolo_dataset
+from bookworm.yolo_training import DEFAULT_BASE_WEIGHTS
+from bookworm.yolo_training import DEFAULT_EPOCHS as DEFAULT_TRAINING_EPOCHS
+from bookworm.yolo_training import DEFAULT_IMAGE_SIZE as DEFAULT_TRAINING_IMAGE_SIZE
+from bookworm.yolo_training import run_yolo_fine_tune
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -30,6 +35,7 @@ ANNOTATOR_HOST = "127.0.0.1"
 DEFAULT_ANNOTATOR_PORT = 8765
 DEFAULT_LABELS_DIRECTORY = Path("labels")
 DEFAULT_DRIVE_OUTPUT_DIR = Path("dataset/drive")
+DEFAULT_YOLO_DATASET_DIR = Path("dataset/yolo")
 
 
 class ImageWriteError(Exception):
@@ -78,6 +84,29 @@ def fetch_drive(
     except DriveDownloadError as error:
         raise typer.Exit(code=1) from error
     typer.echo(json.dumps({"downloaded": len(downloaded_file_paths), "output_dir": str(output_dir)}))
+
+
+@app.command(name="build-yolo-dataset")
+def build_yolo_dataset_command(
+    photos_dir: ExistingDirectoryPath,
+    labels_dir: Annotated[Path, typer.Option(help="Folder with saved annotator labels.")] = DEFAULT_LABELS_DIRECTORY,
+    output_dir: Annotated[Path, typer.Option(help="Folder to write the YOLO dataset into.")] = DEFAULT_YOLO_DATASET_DIR,
+) -> None:
+    """Convert labeled photos into a YOLO training dataset."""
+    summary = build_yolo_dataset(photos_dir, labels_dir, output_dir)
+    typer.echo(json.dumps(asdict(summary)))
+
+
+@app.command(name="train-yolo")
+def train_yolo(
+    dataset_yaml: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    base_weights: Annotated[Path, typer.Option(help="Pretrained weights to fine-tune from.")] = DEFAULT_BASE_WEIGHTS,
+    epochs: Annotated[int, typer.Option(min=1)] = DEFAULT_TRAINING_EPOCHS,
+    imgsz: Annotated[int, typer.Option(min=1)] = DEFAULT_TRAINING_IMAGE_SIZE,
+) -> None:
+    """Fine-tune the book detector on a YOLO dataset built by build-yolo-dataset."""
+    best_weights_path = run_yolo_fine_tune(dataset_yaml, base_weights=base_weights, epochs=epochs, image_size=imgsz)
+    typer.echo(json.dumps({"best_weights": str(best_weights_path)}))
 
 
 def write_annotated_image(output_path: Path, annotated_image: np.ndarray) -> None:
