@@ -20,6 +20,8 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 - `bookworm fetch-drive FOLDER_URL` downloads every photo from a public ("anyone with the link") Google Drive folder into `dataset/drive/` (or `--output-dir`), flat and ready for `bookworm annotator`. Rerunning it skips files already downloaded. A file whose name collides with a different Drive file's name (two distinct files sharing the same iPhone-style filename, for example) is saved with its Drive file ID prefixed, so a collision never silently drops a photo (B2).
 - `bookworm build-yolo-dataset PHOTOS_DIR` converts labeled photos (from `bookworm annotator`) into a YOLO training dataset at `dataset/yolo/` (`images/{train,val}`, `labels/{train,val}`, `data.yaml`), with the 7 annotator box classes (`book`, `barcode`, `printed_isbn`, `title`, `author`, `publisher`, `other_text`) as YOLO class ids 0-6. The train/val split is deterministic per photo, so labeling more photos later doesn't reshuffle ones already placed. Unlabeled photos are skipped, not errored.
 - `bookworm train-yolo DATASET_YAML` fine-tunes the existing `models/yolo26n.pt` weights on a dataset built by `build-yolo-dataset` and prints the path to the resulting best checkpoint.
+- Annotator edit modes: `Tab` toggles Normal and Insert, `Escape` cancels any in-progress drag and forces Normal. In Insert mode, dragging always starts a new box, even on top of an existing one, so boxes can be nested (a `title` box inside a `book` box, for example) (F1).
+- Annotator "Detect books" button: calls `GET /api/detections`, which runs the existing YOLO `book` detector on the open photo, and adds each detection as an unconfirmed `book` box (drawn dashed until reviewed) (F1).
 
 ### Changed
 - Terminal logs are readable `event key=value` lines, colored in a real terminal. `logs/bookworm.jsonl` still gets every event as JSON.
@@ -29,6 +31,7 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 ### Fixed
 - Dragging a selected box's corner handle now resizes that box instead of drawing a new one on top of it (B2).
 - Dragging a selected box's edge — not just one of its four corners — now resizes that edge instead of moving the whole box (B3).
+- A box could never be drawn inside or on top of an existing box, so nested regions (a `title` box inside a `book` box) couldn't be labeled at all. Fixed by the new Insert edit mode (B4).
 
 ## [0.1.0] - 2026-09-15
 
