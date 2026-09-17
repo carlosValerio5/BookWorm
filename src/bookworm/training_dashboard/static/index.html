@@ -9,10 +9,13 @@
     <link rel="stylesheet" href="/static/dashboard.css">
   </head>
   <body>
-    <div class="app-window">
+    <div class="app-window" id="app-window">
       <header class="title-bar">
         <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
         <div class="window-title">
+          <button id="back-button" class="icon-button" type="button" aria-label="Back to runs" hidden>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6.5 3.5-4 4.5 4 4.5M3 8h10"/></svg>
+          </button>
           <h1 id="run-name" class="title-run">BookWorm Training Dashboard</h1>
         </div>
         <div class="title-meta">
@@ -21,49 +24,59 @@
       </header>
 
       <main class="dashboard-body">
-        <div id="empty-stage" class="empty-stage">
-          <p class="empty-stage-title">Waiting for a training run</p>
-          <p class="empty-stage-hint">Start one with <kbd>bookworm train-yolo DATASET_YAML</kbd></p>
-        </div>
+        <section id="view-list" class="view-list">
+          <div id="runs-empty" class="empty-stage">
+            <p class="empty-stage-title">No training runs yet</p>
+            <p class="empty-stage-hint">Start one with <kbd>bookworm train-yolo DATASET_YAML</kbd></p>
+          </div>
+          <ul id="runs-list" class="runs-list" hidden></ul>
+        </section>
 
-        <div id="charts" class="charts" hidden>
-          <section class="pane-section chart-panel">
-            <h2 class="pane-label">Loss <span class="group-count">train vs val</span></h2>
-            <div class="chart-wrap">
-              <svg id="loss-chart" class="chart" viewBox="0 0 640 220" preserveAspectRatio="none">
-                <g data-role="grid"></g>
-                <g data-role="baselines"></g>
-                <g data-role="series"></g>
-                <g data-role="dots"></g>
-                <g data-role="hover-dots"></g>
-                <line data-role="crosshair" class="chart-crosshair" hidden></line>
-                <rect data-role="hover-target" class="chart-hover-target" x="0" y="0" width="640" height="220"></rect>
-              </svg>
-              <div data-role="tooltip" class="chart-tooltip" hidden></div>
-            </div>
-            <ul id="loss-legend" class="legend"></ul>
-          </section>
+        <section id="view-run" class="view-run" hidden>
+          <div id="empty-stage" class="empty-stage">
+            <p class="empty-stage-title">Waiting for a training run</p>
+            <p class="empty-stage-hint">Start one with <kbd>bookworm train-yolo DATASET_YAML</kbd></p>
+          </div>
 
-          <section class="pane-section chart-panel">
-            <h2 class="pane-label">Accuracy <span class="group-count">validation, with pre-fine-tune baseline</span></h2>
-            <div class="chart-wrap">
-              <svg id="accuracy-chart" class="chart" viewBox="0 0 640 220" preserveAspectRatio="none">
-                <g data-role="grid"></g>
-                <g data-role="baselines"></g>
-                <g data-role="series"></g>
-                <g data-role="dots"></g>
-                <g data-role="hover-dots"></g>
-                <line data-role="crosshair" class="chart-crosshair" hidden></line>
-                <rect data-role="hover-target" class="chart-hover-target" x="0" y="0" width="640" height="220"></rect>
-              </svg>
-              <div data-role="tooltip" class="chart-tooltip" hidden></div>
-            </div>
-            <ul id="accuracy-legend" class="legend"></ul>
-          </section>
-        </div>
+          <div id="charts" class="charts" hidden>
+            <section class="pane-section chart-panel">
+              <h2 class="pane-label">Loss <span class="group-count">train vs val</span></h2>
+              <div class="chart-wrap">
+                <svg id="loss-chart" class="chart" viewBox="0 0 640 220" preserveAspectRatio="none">
+                  <g data-role="grid"></g>
+                  <g data-role="baselines"></g>
+                  <g data-role="series"></g>
+                  <g data-role="dots"></g>
+                  <g data-role="hover-dots"></g>
+                  <line data-role="crosshair" class="chart-crosshair" hidden></line>
+                  <rect data-role="hover-target" class="chart-hover-target" x="0" y="0" width="640" height="220"></rect>
+                </svg>
+                <div data-role="tooltip" class="chart-tooltip" hidden></div>
+              </div>
+              <ul id="loss-legend" class="legend"></ul>
+            </section>
+
+            <section class="pane-section chart-panel">
+              <h2 class="pane-label">Accuracy <span class="group-count">validation, with pre-fine-tune baseline</span></h2>
+              <div class="chart-wrap">
+                <svg id="accuracy-chart" class="chart" viewBox="0 0 640 220" preserveAspectRatio="none">
+                  <g data-role="grid"></g>
+                  <g data-role="baselines"></g>
+                  <g data-role="series"></g>
+                  <g data-role="dots"></g>
+                  <g data-role="hover-dots"></g>
+                  <line data-role="crosshair" class="chart-crosshair" hidden></line>
+                  <rect data-role="hover-target" class="chart-hover-target" x="0" y="0" width="640" height="220"></rect>
+                </svg>
+                <div data-role="tooltip" class="chart-tooltip" hidden></div>
+              </div>
+              <ul id="accuracy-legend" class="legend"></ul>
+            </section>
+          </div>
+        </section>
       </main>
 
-      <aside class="run-pane" aria-label="Run">
+      <aside class="run-pane" id="run-pane" aria-label="Run" hidden>
         <section class="pane-section">
           <h2 class="pane-label">Parameters</h2>
           <div id="run-params" class="param-list"></div>
