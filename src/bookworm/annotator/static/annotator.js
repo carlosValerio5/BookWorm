@@ -57,6 +57,8 @@ const boxCountElement = document.getElementById("box-count");
 const problemListElement = document.getElementById("problem-list");
 const saveButtonElement = document.getElementById("save-button");
 const saveLabelElement = document.getElementById("save-label");
+const detectButtonElement = document.getElementById("detect-button");
+const detectLabelElement = document.getElementById("detect-label");
 const statusModeElement = document.getElementById("status-mode");
 const statusEditModeElement = document.getElementById("status-edit-mode");
 const statusTypeElement = document.getElementById("status-type");
@@ -79,6 +81,7 @@ const state = {
   openedAt: 0,
   hasUnsavedChanges: false,
   isSaving: false,
+  isDetecting: false,
 };
 
 function buildPhotoElement() {
@@ -222,6 +225,14 @@ async function fetchSavedAnnotation(photoPath) {
   return response.ok ? response.json() : null;
 }
 
+async function fetchDetections(photoPath) {
+  const response = await fetch(`/api/detections?photo=${encodeURIComponent(photoPath)}`);
+  if (!response.ok) {
+    throw new Error(`Detection request for ${photoPath} failed with status ${response.status}`);
+  }
+  return response.json();
+}
+
 async function showPhotoImage(photoPath) {
   photoElement.src = `/api/image?photo=${encodeURIComponent(photoPath)}`;
   await photoElement.decode();
@@ -304,6 +315,12 @@ function setSaving(isSaving) {
   saveLabelElement.textContent = isSaving ? "Saving…" : "Save";
 }
 
+function setDetecting(isDetecting) {
+  state.isDetecting = isDetecting;
+  detectLabelElement.textContent = isDetecting ? "Detecting…" : "Detect books";
+  renderStage();
+}
+
 function putDraft(draft) {
   return fetch("/api/annotation", {
     method: "PUT",
@@ -339,6 +356,22 @@ async function saveAnnotation() {
 
 function saveAnnotationAndReportFailure() {
   saveAnnotation().catch(() => showProblems(["Could not reach the annotator server. Is `bookworm annotator` still running?"]));
+}
+
+async function detectBooks() {
+  const photoPath = state.photoPath;
+  setDetecting(true);
+  const detections = await fetchDetections(photoPath).finally(() => setDetecting(false));
+  if (state.photoPath !== photoPath) {
+    return;
+  }
+  state.boxes.push(...detections.map((detection) => ({ box_type: "book", box: detection.box, text: "", confirmed: false })));
+  markChanged();
+  renderAll();
+}
+
+function detectBooksAndReportFailure() {
+  detectBooks().catch(() => showProblems(["Could not reach the annotator server. Is `bookworm annotator` still running?"]));
 }
 
 function selectKind(kind) {
@@ -591,6 +624,7 @@ function renderStage() {
   currentPhotoElement.textContent = state.photoPath ?? APP_NAME;
   photoSizeElement.textContent = hasPhoto ? `${state.photoWidth} × ${state.photoHeight}` : "";
   canvasFrameElement.classList.toggle("locked", hasPhoto && state.kind === null);
+  detectButtonElement.disabled = state.photoPath === null || state.kind === null || state.isDetecting;
 }
 
 function fitPhotoToWell() {
@@ -892,6 +926,7 @@ canvasElement.addEventListener("pointermove", continueDrag);
 canvasElement.addEventListener("pointerup", finishDrag);
 canvasElement.addEventListener("pointerleave", clearCursor);
 saveButtonElement.addEventListener("click", saveAnnotationAndReportFailure);
+detectButtonElement.addEventListener("click", detectBooksAndReportFailure);
 document.addEventListener("keydown", handleKeyDown);
 window.addEventListener("resize", handleWindowResize);
 window.addEventListener("beforeunload", (unloadEvent) => {
