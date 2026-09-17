@@ -21,6 +21,7 @@ from bookworm.text_recognition import load_text_reader
 from bookworm.training_dashboard.web_app import create_dashboard_app
 from bookworm.yolo_dataset import build_yolo_dataset
 from bookworm.yolo_training import DEFAULT_BASE_WEIGHTS
+from bookworm.yolo_training import DEFAULT_BATCH_SIZE as DEFAULT_TRAINING_BATCH_SIZE
 from bookworm.yolo_training import DEFAULT_EPOCHS as DEFAULT_TRAINING_EPOCHS
 from bookworm.yolo_training import DEFAULT_IMAGE_SIZE as DEFAULT_TRAINING_IMAGE_SIZE
 from bookworm.yolo_training import run_yolo_fine_tune
@@ -116,9 +117,10 @@ def train_yolo(
     base_weights: Annotated[Path, typer.Option(help="Pretrained weights to fine-tune from.")] = DEFAULT_BASE_WEIGHTS,
     epochs: Annotated[int, typer.Option(min=1)] = DEFAULT_TRAINING_EPOCHS,
     imgsz: Annotated[int, typer.Option(min=1)] = DEFAULT_TRAINING_IMAGE_SIZE,
+    batch: Annotated[int, typer.Option(min=1)] = DEFAULT_TRAINING_BATCH_SIZE,
 ) -> None:
     """Fine-tune the book detector on a YOLO dataset built by build-yolo-dataset."""
-    best_weights_path = run_yolo_fine_tune(dataset_yaml, base_weights=base_weights, epochs=epochs, image_size=imgsz)
+    best_weights_path = run_yolo_fine_tune(dataset_yaml, base_weights=base_weights, epochs=epochs, image_size=imgsz, batch_size=batch)
     typer.echo(json.dumps({"best_weights": str(best_weights_path)}))
 
 
