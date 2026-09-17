@@ -60,6 +60,34 @@ def test_dashboard_uses_default_runs_dir_and_port(monkeypatch: pytest.MonkeyPatc
     assert options == {"host": "127.0.0.1", "port": cli.DEFAULT_DASHBOARD_PORT, "log_config": None}
 
 
+def test_serve_binds_to_all_interfaces(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    uvicorn_calls: list[tuple[object, dict[str, object]]] = []
+    monkeypatch.setattr(uvicorn, "run", lambda served_app, **options: uvicorn_calls.append((served_app, options)))
+
+    result = runner.invoke(app, ["serve", "--photos-dir", str(tmp_path / "photos"), "--port", "9002"])
+
+    assert result.exit_code == 0, result.output
+    served_app, options = uvicorn_calls[0]
+    assert isinstance(served_app, FastAPI)
+    assert options == {"host": "0.0.0.0", "port": 9002, "log_config": None}
+
+
+def test_serve_uses_default_photos_dir_and_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    uvicorn_calls: list[tuple[object, dict[str, object]]] = []
+    captured_photos_dirs: list[Path] = []
+    monkeypatch.setattr(uvicorn, "run", lambda served_app, **options: uvicorn_calls.append((served_app, options)))
+    monkeypatch.setattr(
+        cli, "create_mobile_app", lambda photos_dir: captured_photos_dirs.append(photos_dir) or FastAPI()
+    )
+
+    result = runner.invoke(app, ["serve"])
+
+    assert result.exit_code == 0, result.output
+    assert captured_photos_dirs == [cli.DEFAULT_MOBILE_PHOTOS_DIR]
+    _, options = uvicorn_calls[0]
+    assert options == {"host": "0.0.0.0", "port": cli.DEFAULT_MOBILE_PORT, "log_config": None}
+
+
 def test_scan_rejects_missing_image_path(tmp_path: Path) -> None:
     result = runner.invoke(app, ["scan", str(tmp_path / "missing.png")])
 
