@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
-import { StyleSheet, Pressable, View, Text, ActivityIndicator, Modal } from 'react-native';
+import { StyleSheet, Pressable, View, Text, ActivityIndicator, Modal, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Image } from 'expo-image';
-import { realBookScan } from '../services/api';
+import { realBookScan, type ScanResult } from '../services/api';
 import { useBooks } from '../context/BookContext';
+import { useLiveDetection } from '../hooks/use-live-detection';
+import { scaleBoxToPreview, type Size } from '../hooks/live-detection-geometry';
 import { StarAccent } from '@/components/star-accent';
 import { BookWormPalette, Colors, Radius, Spacing } from '@/constants/theme';
 
@@ -18,8 +19,15 @@ export default function HomeScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const cameraRef = useRef<any>(null);
-  const [foundBook, setFoundBook] = useState<any>(null);
+  const [previewSize, setPreviewSize] = useState<Size | null>(null);
+  const { box: liveBox, frameSize: liveFrameSize } = useLiveDetection(cameraRef, isCameraActive);
+  const [foundBook, setFoundBook] = useState<ScanResult | null>(null);
   const { addBook } = useBooks();
+
+  const handleCameraLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setPreviewSize({ width, height });
+  };
 
   const encenderCamara = async () => {
     setErrorMessage(null);
@@ -60,14 +68,7 @@ export default function HomeScreen() {
 
   const guardarLibro = () => {
     if (foundBook) {
-      const bookToSave = {
-        title: foundBook.title,
-        author: foundBook.author,
-        isbn: foundBook.isbn,
-        coverImage: foundBook.coverImage,
-      };
-
-      addBook(bookToSave);
+      addBook({ isbn: foundBook.isbn });
       setFoundBook(null);
       alert('¡Libro guardado en tu biblioteca!');
     }
@@ -101,10 +102,16 @@ export default function HomeScreen() {
             <Text style={styles.cameraSubtitle}>Toca aquí para abrir la cámara</Text>
           </Pressable>
         ) : (
-          <View style={styles.cameraBoxActive}>
+          <View style={styles.cameraBoxActive} onLayout={handleCameraLayout}>
             {permission?.granted ? (
               <>
                 <CameraView style={styles.camera} facing="back" ref={cameraRef} />
+                {liveBox && liveFrameSize && previewSize && (
+                  <View
+                    pointerEvents="none"
+                    style={[styles.liveDetectionBox, scaleBoxToPreview(liveBox, liveFrameSize, previewSize)]}
+                  />
+                )}
                 <View style={styles.cameraGoldFrame} pointerEvents="none" />
                 <Pressable style={styles.cameraOverlayAbsolute} onPress={escanearLibroReal}>
                   {loading ? (
@@ -128,18 +135,21 @@ export default function HomeScreen() {
         <Modal visible={!!foundBook} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
-              {foundBook?.coverImage && (
-                <Image source={{ uri: foundBook.coverImage }} style={styles.modalCoverImage} />
-              )}
-
               <View style={styles.modalPreRow}>
                 <StarAccent size={13} />
-                <Text style={styles.modalPre}>Coincidencia encontrada</Text>
+                <Text style={styles.modalPre}>
+                  {foundBook?.kind === 'isbn' ? 'ISBN encontrado' : 'Portada detectada'}
+                </Text>
                 <StarAccent size={13} />
               </View>
-              <Text style={styles.modalTitle}>{foundBook?.title}</Text>
-              <Text style={styles.modalAuthor}>{foundBook?.author}</Text>
-              <Text style={styles.modalIsbn}>ISBN {foundBook?.isbn}</Text>
+              <Text style={styles.modalTitle}>
+                {foundBook?.isbn ? `ISBN ${foundBook.isbn}` : 'Sin ISBN leído'}
+              </Text>
+              <Text style={styles.modalAuthor}>
+                {foundBook?.texts && foundBook.texts.length > 0
+                  ? foundBook.texts.map((text) => text.text).join(' · ')
+                  : 'Sin texto legible en la portada'}
+              </Text>
 
               <Pressable style={styles.saveButton} onPress={guardarLibro}>
                 <Text style={styles.saveButtonText}>Guardar en mi biblioteca</Text>
@@ -239,6 +249,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.frame,
     margin: Spacing.md,
   },
+  liveDetectionBox: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: BookWormPalette.gold,
+    borderRadius: Radius.row,
+  },
   cameraOverlayAbsolute: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(20, 18, 11, 0.2)',
@@ -284,15 +300,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.group + 8,
     alignItems: 'center',
   },
-  modalCoverImage: {
-    width: 100,
-    height: 140,
-    borderRadius: Radius.row,
-    marginBottom: Spacing.pane,
-    backgroundColor: c.backgroundSelected,
-    borderWidth: 1,
-    borderColor: c.goldLine,
-  },
   modalPreRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
   modalPre: { fontSize: 12, color: c.gold, fontWeight: '500', letterSpacing: 0.3 },
   modalTitle: {
@@ -302,13 +309,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Spacing.xs,
   },
-  modalAuthor: { fontSize: 15, color: c.textSecondary, marginBottom: Spacing.md, textAlign: 'center' },
-  modalIsbn: {
-    fontSize: 12,
-    fontFamily: 'monospace',
-    color: c.textTertiary,
-    marginBottom: Spacing.screen,
-  },
+  modalAuthor: { fontSize: 15, color: c.textSecondary, marginBottom: Spacing.screen, textAlign: 'center' },
   saveButton: {
     backgroundColor: c.primaryButtonFill,
     width: '100%',

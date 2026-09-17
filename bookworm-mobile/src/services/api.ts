@@ -1,5 +1,24 @@
 import * as FileSystem from 'expo-file-system/legacy';
 
+// Si lo quieren probar tiene que poner su ip
+const MOBILE_API_HOST = '192.168.1.193:8000';
+
+export type BoundingBox = { x_min: number; y_min: number; x_max: number; y_max: number };
+export type BookDetectionBox = { confidence: number; box: BoundingBox };
+export type IsbnBarcode = { isbn: string; box: BoundingBox };
+export type RecognizedText = { text: string; confidence: number; box: BoundingBox };
+export type ScanKind = 'isbn' | 'cover' | 'unknown';
+
+export type ScanResult = {
+    scan_id: string;
+    image_path: string;
+    kind: ScanKind;
+    isbn: string | null;
+    books: BookDetectionBox[];
+    barcodes: IsbnBarcode[];
+    texts: RecognizedText[];
+};
+
 export const realBookScan = async (photoUri: string) => {
     try {
         console.log("Convirtiendo foto a Base64 para enviar al servidor...");
@@ -7,9 +26,7 @@ export const realBookScan = async (photoUri: string) => {
             encoding: FileSystem.EncodingType.Base64,
         });
 
-
-        //Si lo quieren probar tiene que poner su ip
-        const response = await fetch('http://192.168.1.193:8000/api/scan', {
+        const response = await fetch(`http://${MOBILE_API_HOST}/api/scan`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image: `data:image/jpeg;base64,${base64Image}` }),
@@ -19,9 +36,9 @@ export const realBookScan = async (photoUri: string) => {
             throw new Error(`Error en el servidor: ${response.status}`);
         }
 
-        const data = await response.json();
+        const data: ScanResult = await response.json();
 
-        if (data.error || !data.title) {
+        if (data.kind === 'unknown') {
             return { success: false, message: "No se pudo reconocer el libro. Intenta enfocar mejor la portada." };
         }
 
@@ -32,3 +49,5 @@ export const realBookScan = async (photoUri: string) => {
         return { success: false, message: "Error de red con el servidor de BookWorm." };
     }
 };
+
+export const liveDetectWebSocketUrl = () => `ws://${MOBILE_API_HOST}/api/live-detect`;

@@ -68,9 +68,9 @@ export default function BibliotecaScreen() {
                   style={[styles.bookColorStripe, { backgroundColor: spineColorForIsbn(item.isbn ?? item.id) }]}
                 />
                 <View style={styles.bookItemBody}>
-                  <Text style={styles.bookItemTitle}>{item.title}</Text>
-                  <Text style={styles.bookItemAuthor}>{item.author}</Text>
-                  <Text style={styles.bookItemIsbn}>ISBN {item.isbn}</Text>
+                  <Text style={styles.bookItemTitle}>{item.title ?? 'Portada sin identificar'}</Text>
+                  {item.author && <Text style={styles.bookItemAuthor}>{item.author}</Text>}
+                  <Text style={styles.bookItemIsbn}>{item.isbn ? `ISBN ${item.isbn}` : 'ISBN no leído'}</Text>
                 </View>
               </View>
             )}
