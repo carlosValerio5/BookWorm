@@ -159,6 +159,10 @@ uv run bookworm annotator dataset/
 
 Open `http://127.0.0.1:8765`, pick a photo and pick its class first (`1` isbn, `2` cover, `3` unknown). Choose a box type (`b` book, `c` barcode, `i` printed_isbn, `t` title, `a` author, `p` publisher, `o` other_text), drag on the photo to draw a box, and type the text inside it. Barcode boxes have no text; the number goes in a `printed_isbn` box. Drag a box to move it. `Delete` removes the selected box, `Ctrl/⌘ S` saves and `n` opens the next photo.
 
+The annotator has two edit modes, like vim: **Normal** (the default) selects, moves and resizes boxes; **Insert** always starts a new box on drag, even on top of an existing one, so you can nest boxes (a `title` box inside a `book` box, for example). `Tab` toggles between them and `Escape` always cancels back to Normal, canceling any box you're mid-way through drawing.
+
+The "Detect books" button runs the existing YOLO `book` detector on the open photo and adds a box for each book it finds. These boxes render dashed until you've reviewed them; only the `book` class is detected today, other box types still need to be drawn by hand.
+
 <p align="center">
   <img src="assets/annotator-labeling.png" alt="BookWorm Annotator: a dark desktop-style window with a back cover photo in the center, barcode and printed_isbn boxes drawn on it, and the class, box type and saved boxes panels on the right" width="900">
   <br>

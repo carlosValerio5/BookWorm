@@ -7,8 +7,10 @@ import pytest
 from fastapi.testclient import TestClient
 from image_factories import create_blank_image, write_heic_image, write_image
 
+from bookworm.annotator import web_app
 from bookworm.annotator.web_app import create_annotator_app
 from bookworm.logging_setup import configure_logging
+from bookworm.scan_types import BookDetection, BoundingBox
 
 PNG_PHOTO_PATH = "cover/blank.png"
 HEIC_PHOTO_PATH = "iphone.heic"
@@ -115,6 +117,46 @@ def test_image_returns_422_for_file_that_is_not_an_image(client: TestClient, pho
     (photos_dir / "broken.jpg").write_bytes(b"not an image")
 
     assert client.get("/api/image", params={"photo": "broken.jpg"}).status_code == 422
+
+
+def test_detections_endpoint_returns_boxes_from_the_book_detector(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(web_app, "load_book_detector", lambda: "stub-detector")
+    monkeypatch.setattr(
+        web_app,
+        "detect_books",
+        lambda _image, _book_detector: [BookDetection(confidence=0.87, box=BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4))],
+    )
+
+    response = client.get("/api/detections", params={"photo": PNG_PHOTO_PATH})
+
+    assert response.status_code == 200
+    assert response.json() == [{"confidence": 0.87, "box": {"x_min": 1, "y_min": 2, "x_max": 3, "y_max": 4}}]
+
+
+def test_detections_returns_404_for_missing_photo(client: TestClient) -> None:
+    assert client.get("/api/detections", params={"photo": "missing.png"}).status_code == 404
+
+
+def test_detections_rejects_path_outside_photos_folder(client: TestClient) -> None:
+    assert client.get("/api/detections", params={"photo": "../secret.png"}).status_code == 400
+
+
+def test_detections_call_is_logged(client: TestClient, log_file_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(web_app, "load_book_detector", lambda: "stub-detector")
+    monkeypatch.setattr(web_app, "detect_books", lambda _image, _book_detector: [])
+
+    client.get("/api/detections", params={"photo": PNG_PHOTO_PATH})
+
+    finished_calls = [event["call"] for event in read_log_events(log_file_path) if event["event"] == "call_finished"]
+    assert "get_photo_detections" in finished_calls
+
+
+@pytest.mark.slow
+def test_detections_endpoint_with_real_detector_finds_no_books_in_a_blank_photo(client: TestClient) -> None:
+    response = client.get("/api/detections", params={"photo": PNG_PHOTO_PATH})
+
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 def test_annotation_is_404_before_saving(client: TestClient) -> None:

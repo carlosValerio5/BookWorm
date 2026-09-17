@@ -65,6 +65,21 @@ test("chooseDragMode moves the box under the pointer when no handle is grabbed",
   assert.equal(mode, "move");
 });
 
+test("chooseDragMode draws in insert mode even when the pointer is over an existing box", () => {
+  const mode = chooseDragMode({ editMode: "insert", selectedBoxIndex: null, resizeHandle: null, boxIndexAtPoint: 0 });
+  assert.equal(mode, "draw");
+});
+
+test("chooseDragMode draws in insert mode even when a resize handle is grabbed", () => {
+  const mode = chooseDragMode({ editMode: "insert", selectedBoxIndex: 0, resizeHandle: { id: "se" }, boxIndexAtPoint: 0 });
+  assert.equal(mode, "draw");
+});
+
+test("chooseDragMode still resizes in normal mode when a handle is grabbed", () => {
+  const mode = chooseDragMode({ editMode: "normal", selectedBoxIndex: 0, resizeHandle: { id: "se" }, boxIndexAtPoint: -1 });
+  assert.equal(mode, "resize");
+});
+
 test("resizeBox moves only x_max and y_max for the se handle, keeping x_min and y_min anchored", () => {
   const resized = resizeBox(BOX, { id: "se", xEdge: "x_max", yEdge: "y_max" }, { x: 320, y: 280 });
   assert.deepEqual(resized, { x_min: 200, y_min: 200, x_max: 320, y_max: 280 });

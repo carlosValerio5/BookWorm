@@ -29,8 +29,10 @@ from bookworm.annotator.annotation_storage import (
     save_annotation,
 )
 from bookworm.annotator.annotation_types import AnnotationDraft, LabeledBox, PhotoAnnotation
+from bookworm.book_detection import detect_books, load_book_detector
 from bookworm.image_loading import ImageLoadError, load_image
 from bookworm.logging_setup import log_call
+from bookworm.scan_types import BookDetection
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -62,6 +64,12 @@ def create_annotator_app(photos_dir: Path, labels_dir: Path) -> FastAPI:
         with log_call(logger, "get_photo_image", photo_path=photo):
             jpeg_bytes = encode_jpeg(load_image(photo_file))
         return Response(content=jpeg_bytes, media_type="image/jpeg")
+
+    @app.get("/api/detections")
+    def get_photo_detections(photo: str) -> list[BookDetection]:
+        photo_file = find_photo_file(photos_dir, photo)
+        with log_call(logger, "get_photo_detections", photo_path=photo):
+            return detect_books(load_image(photo_file), load_book_detector())
 
     @app.get("/api/annotation")
     def get_photo_annotation(photo: str) -> PhotoAnnotation:

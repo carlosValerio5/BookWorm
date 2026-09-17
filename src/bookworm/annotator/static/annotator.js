@@ -57,7 +57,10 @@ const boxCountElement = document.getElementById("box-count");
 const problemListElement = document.getElementById("problem-list");
 const saveButtonElement = document.getElementById("save-button");
 const saveLabelElement = document.getElementById("save-label");
+const detectButtonElement = document.getElementById("detect-button");
+const detectLabelElement = document.getElementById("detect-label");
 const statusModeElement = document.getElementById("status-mode");
+const statusEditModeElement = document.getElementById("status-edit-mode");
 const statusTypeElement = document.getElementById("status-type");
 const statusCursorElement = document.getElementById("status-cursor");
 const statusTimerElement = document.getElementById("status-timer");
@@ -72,11 +75,13 @@ const state = {
   boxType: "title",
   boxes: [],
   selectedBoxIndex: null,
+  editMode: "normal",
   drag: null,
   cursorPoint: null,
   openedAt: 0,
   hasUnsavedChanges: false,
   isSaving: false,
+  isDetecting: false,
 };
 
 function buildPhotoElement() {
@@ -220,6 +225,14 @@ async function fetchSavedAnnotation(photoPath) {
   return response.ok ? response.json() : null;
 }
 
+async function fetchDetections(photoPath) {
+  const response = await fetch(`/api/detections?photo=${encodeURIComponent(photoPath)}`);
+  if (!response.ok) {
+    throw new Error(`Detection request for ${photoPath} failed with status ${response.status}`);
+  }
+  return response.json();
+}
+
 async function showPhotoImage(photoPath) {
   photoElement.src = `/api/image?photo=${encodeURIComponent(photoPath)}`;
   await photoElement.decode();
@@ -235,6 +248,7 @@ function resetPhotoState(photoPath) {
   state.kind = null;
   state.boxes = [];
   state.selectedBoxIndex = null;
+  state.editMode = "normal";
   state.drag = null;
   state.cursorPoint = null;
   state.hasUnsavedChanges = false;
@@ -301,6 +315,12 @@ function setSaving(isSaving) {
   saveLabelElement.textContent = isSaving ? "Saving…" : "Save";
 }
 
+function setDetecting(isDetecting) {
+  state.isDetecting = isDetecting;
+  detectLabelElement.textContent = isDetecting ? "Detecting…" : "Detect books";
+  renderStage();
+}
+
 function putDraft(draft) {
   return fetch("/api/annotation", {
     method: "PUT",
@@ -338,6 +358,22 @@ function saveAnnotationAndReportFailure() {
   saveAnnotation().catch(() => showProblems(["Could not reach the annotator server. Is `bookworm annotator` still running?"]));
 }
 
+async function detectBooks() {
+  const photoPath = state.photoPath;
+  setDetecting(true);
+  const detections = await fetchDetections(photoPath).finally(() => setDetecting(false));
+  if (state.photoPath !== photoPath) {
+    return;
+  }
+  state.boxes.push(...detections.map((detection) => ({ box_type: "book", box: detection.box, text: "", confirmed: false })));
+  markChanged();
+  renderAll();
+}
+
+function detectBooksAndReportFailure() {
+  detectBooks().catch(() => showProblems(["Could not reach the annotator server. Is `bookworm annotator` still running?"]));
+}
+
 function selectKind(kind) {
   state.kind = kind;
   markChanged();
@@ -349,6 +385,17 @@ function selectBoxType(boxType) {
   renderShortcutButtons();
   renderStatusBar();
   renderBoxList();
+}
+
+function toggleEditMode() {
+  state.editMode = state.editMode === "insert" ? "normal" : "insert";
+  renderAll();
+}
+
+function forceNormalMode() {
+  state.drag = null;
+  state.editMode = "normal";
+  renderAll();
 }
 
 function deleteSelectedBox() {
@@ -577,6 +624,7 @@ function renderStage() {
   currentPhotoElement.textContent = state.photoPath ?? APP_NAME;
   photoSizeElement.textContent = hasPhoto ? `${state.photoWidth} × ${state.photoHeight}` : "";
   canvasFrameElement.classList.toggle("locked", hasPhoto && state.kind === null);
+  detectButtonElement.disabled = state.photoPath === null || state.kind === null || state.isDetecting;
 }
 
 function fitPhotoToWell() {
@@ -601,6 +649,8 @@ function renderTimer() {
 
 function renderStatusBar() {
   statusModeElement.textContent = describeMode();
+  statusEditModeElement.textContent = state.editMode.toUpperCase();
+  statusEditModeElement.classList.toggle("is-insert", state.editMode === "insert");
   statusTypeElement.textContent = state.boxType;
   statusTypeElement.style.setProperty("--type-color", colorForBoxType(state.boxType));
   renderStatusCursor();
@@ -659,12 +709,16 @@ function drawLabeledBox(context, { labeledBox, boxIndex, isSelected }, scale) {
   const rectangle = toCanvasPixels(labeledBox.box, scale);
   const color = colorForBoxType(labeledBox.box_type);
   const lineWidth = isSelected ? 2.5 : 1.5;
+  if (!labeledBox.confirmed) {
+    context.setLineDash([6, 4]);
+  }
   context.lineWidth = lineWidth + 2;
   context.strokeStyle = "rgba(20, 18, 11, 0.6)";
   context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
   context.lineWidth = lineWidth;
   context.strokeStyle = color;
   context.strokeRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+  context.setLineDash([]);
   if (isSelected) {
     context.fillStyle = withAlpha(color, 0.12);
     context.fillRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
@@ -745,7 +799,7 @@ function startDrag(pointerEvent) {
   const scale = currentPhotoScale();
   const resizeHandle = state.selectedBoxIndex === null ? null : resizeHandleAtPointer(photoPoint, state.selectedBoxIndex, scale);
   const boxIndex = findTopBoxIndexAt(photoPoint);
-  const dragMode = chooseDragMode({ selectedBoxIndex: state.selectedBoxIndex, resizeHandle, boxIndexAtPoint: boxIndex });
+  const dragMode = chooseDragMode({ editMode: state.editMode, selectedBoxIndex: state.selectedBoxIndex, resizeHandle, boxIndexAtPoint: boxIndex });
   canvasElement.setPointerCapture(pointerEvent.pointerId);
   if (dragMode === "resize") {
     state.drag = { mode: "resize", handle: resizeHandle, boxIndex: state.selectedBoxIndex, originalBox: { ...state.boxes[state.selectedBoxIndex].box } };
@@ -848,6 +902,8 @@ function handleShortcutKey(keyboardEvent) {
     delete: deleteSelectedBox,
     backspace: deleteSelectedBox,
     n: openNextPhoto,
+    tab: toggleEditMode,
+    escape: forceNormalMode,
   };
   if (kindShortcut) {
     selectKind(kindShortcut.kind);
@@ -870,6 +926,7 @@ canvasElement.addEventListener("pointermove", continueDrag);
 canvasElement.addEventListener("pointerup", finishDrag);
 canvasElement.addEventListener("pointerleave", clearCursor);
 saveButtonElement.addEventListener("click", saveAnnotationAndReportFailure);
+detectButtonElement.addEventListener("click", detectBooksAndReportFailure);
 document.addEventListener("keydown", handleKeyDown);
 window.addEventListener("resize", handleWindowResize);
 window.addEventListener("beforeunload", (unloadEvent) => {

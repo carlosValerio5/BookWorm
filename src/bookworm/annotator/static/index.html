@@ -62,16 +62,18 @@
         </section>
         <ul id="problem-list" class="problem-list" aria-live="polite"></ul>
         <div class="pane-footer">
+          <button id="detect-button" class="pill pill-secondary" type="button"><span id="detect-label">Detect books</span></button>
           <button id="save-button" class="pill pill-primary" type="button"><span id="save-label">Save</span><kbd>⌘S</kbd></button>
         </div>
       </aside>
 
       <footer class="status-bar">
         <span id="status-mode" class="status-mode">Browse</span>
+        <span id="status-edit-mode" class="status-edit-mode">NORMAL</span>
         <span id="status-type" class="status-type"></span>
         <span id="status-cursor" class="status-cursor"></span>
         <span id="status-timer" class="status-timer">0:00</span>
-        <span class="status-hints"><span><kbd>Del</kbd>remove box</span><span><kbd>n</kbd>next photo</span></span>
+        <span class="status-hints"><span><kbd>Tab</kbd>insert mode</span><span><kbd>Esc</kbd>normal mode</span><span><kbd>Del</kbd>remove box</span><span><kbd>n</kbd>next photo</span></span>
       </footer>
     </div>
     <script src="/static/box_geometry.js"></script>
