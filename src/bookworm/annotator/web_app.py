@@ -29,11 +29,13 @@ from bookworm.annotator.annotation_storage import (
     save_annotation,
 )
 from bookworm.annotator.annotation_types import AnnotationDraft, BoxType, LabeledBox, PhotoAnnotation
-from bookworm.book_detection import detect_books, load_book_detector
+from bookworm.book_detection import load_book_detector
 from bookworm.image_loading import ImageLoadError, load_image
 from bookworm.isbn_validation import extract_isbn_from_text
 from bookworm.logging_setup import log_call
-from bookworm.scan_types import BookDetection, ScanResult
+from bookworm.scan_classification import scan_image
+from bookworm.scan_types import ScanResult
+from bookworm.text_recognition import load_text_reader
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -67,10 +69,10 @@ def create_annotator_app(photos_dir: Path, labels_dir: Path) -> FastAPI:
         return Response(content=jpeg_bytes, media_type="image/jpeg")
 
     @app.get("/api/detections")
-    def get_photo_detections(photo: str) -> list[BookDetection]:
+    def get_photo_detections(photo: str) -> list[LabeledBox]:
         photo_file = find_photo_file(photos_dir, photo)
         with log_call(logger, "get_photo_detections", photo_path=photo):
-            return detect_books(load_image(photo_file), load_book_detector())
+            return labeled_boxes_from_scan(scan_image(photo_file, load_book_detector(), load_text_reader()))
 
     @app.get("/api/annotation")
     def get_photo_annotation(photo: str) -> PhotoAnnotation:
