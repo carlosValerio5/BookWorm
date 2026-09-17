@@ -317,7 +317,7 @@ function setSaving(isSaving) {
 
 function setDetecting(isDetecting) {
   state.isDetecting = isDetecting;
-  detectLabelElement.textContent = isDetecting ? "Detecting…" : "Detect books";
+  detectLabelElement.textContent = isDetecting ? "Detecting…" : "Detect boxes";
   renderStage();
 }
 
@@ -358,20 +358,20 @@ function saveAnnotationAndReportFailure() {
   saveAnnotation().catch(() => showProblems(["Could not reach the annotator server. Is `bookworm annotator` still running?"]));
 }
 
-async function detectBooks() {
+async function detectBoxes() {
   const photoPath = state.photoPath;
   setDetecting(true);
   const detections = await fetchDetections(photoPath).finally(() => setDetecting(false));
   if (state.photoPath !== photoPath) {
     return;
   }
-  state.boxes.push(...detections.map((detection) => ({ box_type: "book", box: detection.box, text: "", confirmed: false })));
+  state.boxes.push(...detections);
   markChanged();
   renderAll();
 }
 
-function detectBooksAndReportFailure() {
-  detectBooks().catch(() => showProblems(["Could not reach the annotator server. Is `bookworm annotator` still running?"]));
+function detectBoxesAndReportFailure() {
+  detectBoxes().catch(() => showProblems(["Could not reach the annotator server. Is `bookworm annotator` still running?"]));
 }
 
 function selectKind(kind) {
@@ -926,7 +926,7 @@ canvasElement.addEventListener("pointermove", continueDrag);
 canvasElement.addEventListener("pointerup", finishDrag);
 canvasElement.addEventListener("pointerleave", clearCursor);
 saveButtonElement.addEventListener("click", saveAnnotationAndReportFailure);
-detectButtonElement.addEventListener("click", detectBooksAndReportFailure);
+detectButtonElement.addEventListener("click", detectBoxesAndReportFailure);
 document.addEventListener("keydown", handleKeyDown);
 window.addEventListener("resize", handleWindowResize);
 window.addEventListener("beforeunload", (unloadEvent) => {
