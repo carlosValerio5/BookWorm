@@ -85,3 +85,16 @@ def test_live_detect_skips_a_malformed_frame_without_hanging(client: TestClient)
         response = websocket.receive_json()
 
     assert response == {"boxes": []}
+
+
+@pytest.mark.slow
+@pytest.mark.usefixtures("book_detector")
+def test_live_detect_skips_a_frame_that_is_not_a_real_image(client: TestClient) -> None:
+    good_frame = encode_jpeg_bytes(create_blank_image())
+
+    with client.websocket_connect("/api/live-detect") as websocket:
+        websocket.send_text(build_frame_payload(b"not a jpeg"))
+        websocket.send_text(build_frame_payload(good_frame))
+        response = websocket.receive_json()
+
+    assert response == {"boxes": []}
