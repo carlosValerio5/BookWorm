@@ -3,19 +3,23 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0-f2cc8f" alt="Version 0.1.0">
+  <img src="https://img.shields.io/badge/version-0.2.0-f2cc8f" alt="Version 0.2.0">
   <img src="https://img.shields.io/badge/python-3.13-3776AB?logo=python&logoColor=white" alt="Python 3.13">
   <a href="https://github.com/astral-sh/uv"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json" alt="uv"></a>
   <a href="https://docs.ultralytics.com/"><img src="https://img.shields.io/badge/Ultralytics-YOLO26n-111F68" alt="Ultralytics YOLO26n"></a>
   <a href="https://github.com/JaidedAI/EasyOCR"><img src="https://img.shields.io/badge/EasyOCR-es%20%7C%20en-81b29a" alt="EasyOCR, Spanish and English"></a>
   <a href="https://github.com/zxing-cpp/zxing-cpp"><img src="https://img.shields.io/badge/barcodes-zxing--cpp-e07a5f" alt="zxing-cpp"></a>
   <a href="https://www.structlog.org/"><img src="https://img.shields.io/badge/logs-structlog%20JSON-1f2a44" alt="structlog JSON logs"></a>
+  <a href="https://expo.dev/"><img src="https://img.shields.io/badge/mobile-Expo%20SDK%2057-000020?logo=expo&logoColor=white" alt="Mobile app on Expo SDK 57"></a>
   <img src="https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white" alt="Tested with pytest">
 </p>
 
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
   <a href="#how-a-scan-works">How a scan works</a> ·
+  <a href="#building-a-training-dataset">Training</a> ·
+  <a href="#collecting-candidate-photos">Crawler</a> ·
+  <a href="#mobile-app">Mobile app</a> ·
   <a href="#logs">Logs</a> ·
   <a href="#tests">Tests</a> ·
   <a href="#roadmap">Roadmap</a>
@@ -28,7 +32,7 @@ BookWorm looks at a photo of a book and tells you which one it is. Show it the b
 It's for people who can't walk past a used bookstore. You're in a thrift shop with a paperback in your hand and you want to look it up before you buy it, and a photo should be enough for that.
 
 > [!NOTE]
-> Version 0.1.0 is a command-line scanner. Saving your finds to a local database and an agent that researches a book for you are next on the [roadmap](#roadmap).
+> Version 0.2.0 scans with a book detector fine-tuned on our own labeled photos, comes with the tools to label and train that detector yourself, and has a mobile app that shows a live box around a book while you aim. Saving your finds to a local database and an agent that researches a book for you are next on the [roadmap](#roadmap).
 
 <p align="center">
   <img src="assets/demo-annotated.png" alt="Annotated scan: a red box around the ISBN barcode and blue boxes around the text EasyOCR read" width="720">
@@ -171,11 +175,67 @@ The "Detect boxes" button runs the same detection the scanner uses (YOLO for `bo
 
 Each photo gets a JSON file in `labels/` that mirrors its path, like `labels/cover/IMG_0012.HEIC.json`. Boxes are stored in the original photo's pixels, the same coordinates the scanner reports. Saving is refused when a box falls outside the photo, a `printed_isbn` has no valid ISBN, or a text box is empty. `labels/` is in `.gitignore`, like `dataset/`.
 
+## Building a training dataset
+
+Fine-tuning the book detector needs labeled photos. Get photos into a folder from your own camera roll, or pull them from a public ("anyone with the link") Google Drive folder:
+
+```bash
+uv run bookworm fetch-drive https://drive.google.com/drive/folders/your-folder-id
+```
+
+Downloads every photo into `dataset/drive/` (or `--output-dir`). Rerunning skips files already downloaded. Two different photos that happen to share a filename (two phones both saving `IMG_0034.HEIC`, for example) don't collide: whichever name isn't unique gets its Drive file ID prefixed.
+
+Label the photos with `bookworm annotator` (above), then turn the labels into a YOLO dataset:
+
+```bash
+uv run bookworm build-yolo-dataset dataset/
+```
+
+Writes `dataset/yolo/` (`images/{train,val}`, `labels/{train,val}`, `data.yaml`) with the annotator's 7 box classes (`book`, `barcode`, `printed_isbn`, `title`, `author`, `publisher`, `other_text`) as YOLO classes 0-6. The train/val split is deterministic per photo, so labeling more photos later doesn't reshuffle photos already placed, and photos with no label are skipped instead of failing the build.
+
+## Training the detector
+
+```bash
+uv run bookworm train-yolo dataset/yolo/data.yaml
+```
+
+Fine-tunes `models/yolo26n.pt` on the dataset and prints the path to the best checkpoint. `--epochs`, `--imgsz` and `--batch` (default 4) override ultralytics' own defaults.
+
+```bash
+uv run bookworm dashboard
+```
+
+Opens `http://127.0.0.1:8766` on a list of every run under `runs/`. Pick one to see its loss (train vs val, live from `results.csv`) and validation accuracy (precision, recall, mAP50, mAP50-95), plus the run's hyperparameters and a dashed reference line for the un-fine-tuned base weights.
+
+`bookworm scan`, `annotate` and `annotator` already detect books with `models/book_detector.pt`, fine-tuned this way on our own 7-class dataset, instead of the base COCO weights.
+
+## Collecting candidate photos
+
+```bash
+uv run bookworm-crawl run blog_pages --seed-file crawler_seeds/blog_pages.toml --contact you@example.com
+```
+
+Crawls one source (`blog_pages`, `commons_categories`) for candidate training photos, saving each with a hint label (`cover`, `isbn` or `spine`). A run picks up where the last one stopped, obeys the source's `robots.txt`, waits between requests to the same host, and stops on a 429. State lives in `dataset/crawled/crawl_state.sqlite3`.
+
+```bash
+uv run bookworm-crawl status
+```
+
+Prints request counts per source and saved photo counts per hint label.
+
+## Mobile app
+
+```bash
+uv run bookworm serve
+```
+
+Opens the BookWorm Mobile API at `http://0.0.0.0:8000` for the Expo app in [`bookworm-mobile/`](bookworm-mobile/) to scan against. While you're aiming the camera, the app shows a live gold box over a detected book — the `WS /api/live-detect` endpoint runs book detection only, a few times a second, on downscaled snapshots. Tapping still runs the full `scan_image` pipeline (YOLO, OCR, zxing) and the result sheet and biblioteca show what was actually read (ISBN, OCR snippets), not a placeholder title and author.
+
 ## Project layout
 
 | Module | Job |
 |---|---|
-| `cli.py` | The `scan`, `annotate` and `annotator` commands (Typer) |
+| `cli.py` | The `scan`, `annotate`, `annotator`, `dashboard`, `serve`, `fetch-drive`, `build-yolo-dataset` and `train-yolo` commands (Typer) |
 | `annotator/web_app.py` | The local labeling web app and its API (FastAPI) |
 | `annotator/annotation_storage.py` | Lists photos, validates labels and saves them |
 | `annotator/annotation_types.py` | The dataclasses that end up in a label file |
@@ -188,6 +248,12 @@ Each photo gets a JSON file in `labels/` that mirrors its path, like `labels/cov
 | `annotation_drawing.py` | Draws the boxes and the `kind` label |
 | `logging_setup.py` | structlog JSON config and the `log_call` timer |
 | `scan_types.py` | The dataclasses that end up in the JSON |
+| `drive_download.py` | Downloads photos from a public Google Drive folder |
+| `yolo_dataset.py` | Converts annotator labels into a YOLO training dataset |
+| `yolo_training.py` | Fine-tunes the book detector |
+| `training_dashboard/` | `bookworm dashboard`'s metrics reading and web app |
+| `mobile/server.py` | The mobile API: `POST /api/scan` and the `WS /api/live-detect` websocket |
+| `crawler/` | `bookworm-crawl`'s sources, robots.txt policy, request pacing and crawl state |
 
 ## Known limits
 
@@ -199,6 +265,8 @@ A `cover` result gives you the text on the cover. It doesn't tell you the title 
 
 - [x] Tell a cover from an ISBN and read the ISBN
 - [x] HEIC photos and Spanish text
+- [x] Label, train and fine-tune a custom book detector
+- [x] Mobile app with live detection while aiming the camera
 - [ ] Save finds to a local database
 - [ ] An agent that uses tool calls to research a book for you
 

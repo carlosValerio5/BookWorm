@@ -6,6 +6,8 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-17
+
 ### Added
 - Mobile product and design docs (`bookworm-mobile/PRODUCT.md`, `bookworm-mobile/DESIGN.md`): warm dark "Viewfinder" north star, screen map, and shared tokens in `bookworm-mobile/src/constants/theme.ts`.
 - Mobile UI: warm dark scan and biblioteca screens with vintage gold (`#f2cc8f`) star accents, gold-framed camera, and token-driven styling.
@@ -60,5 +62,6 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 - README with a banner, a demo scan and a pipeline diagram.
 - This changelog, and a CI check that rejects release tags that aren't `vMAJOR.MINOR.PATCH` or don't match `pyproject.toml` and this file.
 
-[Unreleased]: https://github.com/carlosValerio5/BookWorm/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/carlosValerio5/BookWorm/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/carlosValerio5/BookWorm/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/carlosValerio5/BookWorm/releases/tag/v0.1.0

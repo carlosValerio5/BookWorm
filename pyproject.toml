@@ -1,6 +1,6 @@
 [project]
 name = "bookworm"
-version = "0.1.0"
+version = "0.2.0"
 description = "Scan a book cover or ISBN barcode and tell which one you're looking at."
 readme = "README.md"
 authors = [
