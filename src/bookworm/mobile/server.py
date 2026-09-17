@@ -109,8 +109,15 @@ def detect_frame_boxes(frame_bytes: bytes) -> list[BookDetection]:
 async def receive_frames_into_buffer(websocket: WebSocket, buffer: LatestFrameBuffer) -> None:
     try:
         while True:
-            buffer.set(await websocket.receive_bytes())
+            encoded_frame = await websocket.receive_text()
+            try:
+                frame_bytes = base64.b64decode(encoded_frame, validate=True)
+            except binascii.Error:
+                continue
+            buffer.set(frame_bytes)
     except WebSocketDisconnect:
+        pass
+    finally:
         buffer.mark_disconnected()
 
 

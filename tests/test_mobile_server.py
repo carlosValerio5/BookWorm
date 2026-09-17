@@ -53,13 +53,17 @@ def test_scan_endpoint_saves_the_photo_to_the_photos_dir(tmp_path: Path) -> None
     assert list(photos_dir.glob("scan_*.jpg"))
 
 
+def build_frame_payload(frame_bytes: bytes) -> str:
+    return base64.b64encode(frame_bytes).decode()
+
+
 @pytest.mark.slow
 @pytest.mark.usefixtures("book_detector")
-def test_live_detect_returns_boxes_for_a_single_frame(client: TestClient) -> None:
+def test_live_detect_returns_boxes_for_a_single_base64_frame(client: TestClient) -> None:
     frame_bytes = encode_jpeg_bytes(create_blank_image())
 
     with client.websocket_connect("/api/live-detect") as websocket:
-        websocket.send_bytes(frame_bytes)
+        websocket.send_text(build_frame_payload(frame_bytes))
         response = websocket.receive_json()
 
     assert response == {"boxes": []}
@@ -68,3 +72,16 @@ def test_live_detect_returns_boxes_for_a_single_frame(client: TestClient) -> Non
 def test_live_detect_disconnect_ends_the_session_cleanly(client: TestClient) -> None:
     with client.websocket_connect("/api/live-detect"):
         pass
+
+
+@pytest.mark.slow
+@pytest.mark.usefixtures("book_detector")
+def test_live_detect_skips_a_malformed_frame_without_hanging(client: TestClient) -> None:
+    good_frame = encode_jpeg_bytes(create_blank_image())
+
+    with client.websocket_connect("/api/live-detect") as websocket:
+        websocket.send_text("not-valid-base64!!!")
+        websocket.send_text(build_frame_payload(good_frame))
+        response = websocket.receive_json()
+
+    assert response == {"boxes": []}
