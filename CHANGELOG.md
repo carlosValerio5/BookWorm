@@ -26,6 +26,7 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 - Dashboard: a "Parameters" panel (base weights, dataset, epochs, batch size, image size, optimizer, learning rate) read from the run's `args.yaml`; every chart point is hoverable with a crosshair and tooltip showing the exact epoch and value; the accuracy chart adds a dashed reference line per metric for the un-fine-tuned base weights, computed once via `GET /api/run-info` and cached to `baseline_metrics.json` in the run folder (F3).
 - Dashboard home page: `bookworm dashboard` now opens on a list of every training run under `runs/` (`GET /api/runs`), most recently updated first, each showing its epoch progress and last-updated time. Clicking a run opens its charts/parameters at `#/run/<name>`; `/api/metrics` and `/api/run-info` take an optional `?run=` to scope to that run instead of always the latest (F4).
 - `bookworm train-yolo` gained a `--batch` option (default 4, down from ultralytics' own default of 16) so batch size is no longer fixed at whatever `model.train(...)` picks on its own (F5).
+- `bookworm scan`/`annotate`/`annotator` now detect books with `models/book_detector.pt`, fine-tuned on our own 7-class dataset (50 epochs on 41 labeled photos), instead of the base COCO `models/yolo26n.pt` (F6).
 
 ### Changed
 - Terminal logs are readable `event key=value` lines, colored in a real terminal. `logs/bookworm.jsonl` still gets every event as JSON.
