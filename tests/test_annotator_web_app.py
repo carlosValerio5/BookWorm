@@ -2,10 +2,12 @@ import json
 from pathlib import Path
 
 import cv2
+import easyocr
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from image_factories import create_blank_image, write_heic_image, write_image
+from ultralytics import YOLO
 
 from bookworm.annotator import web_app
 from bookworm.annotator.annotation_types import BoxType, LabeledBox
@@ -243,7 +245,9 @@ def test_detections_call_is_logged(client: TestClient, log_file_path: Path, monk
 
 
 @pytest.mark.slow
-def test_detections_endpoint_with_real_detector_finds_no_books_in_a_blank_photo(client: TestClient) -> None:
+def test_detections_endpoint_with_real_detectors_finds_nothing_in_a_blank_photo(
+    client: TestClient, book_detector: YOLO, text_reader: easyocr.Reader
+) -> None:
     response = client.get("/api/detections", params={"photo": PNG_PHOTO_PATH})
 
     assert response.status_code == 200
