@@ -22,6 +22,13 @@ def test_find_latest_results_csv_returns_none_when_no_run_exists(tmp_path: Path)
     assert find_latest_results_csv(tmp_path / "runs") is None
 
 
+def test_find_latest_results_csv_returns_none_when_runs_dir_is_empty(tmp_path: Path) -> None:
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+
+    assert find_latest_results_csv(runs_dir) is None
+
+
 def test_find_latest_results_csv_returns_the_only_run(tmp_path: Path) -> None:
     results_csv = write_results_csv(tmp_path / "runs" / "detect" / "train", ["1,12.3,0.5,0.4,0.3,0.9,0.8,0.85,0.6,0.55,0.45,0.35,0.001,0.001,0.001"])
 
