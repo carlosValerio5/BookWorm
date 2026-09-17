@@ -4,7 +4,9 @@ import torch
 from ultralytics import YOLO
 from ultralytics.engine.results import Boxes
 
-from bookworm.book_detection import convert_boxes_to_book_detections, detect_books, find_class_id
+from pathlib import Path
+
+from bookworm.book_detection import BOOK_DETECTOR_WEIGHTS_PATH, convert_boxes_to_book_detections, detect_books, find_class_id
 from bookworm.scan_types import BookDetection, BoundingBox
 
 IMAGE_SHAPE = (480, 640)
@@ -27,6 +29,10 @@ def test_converts_empty_yolo_boxes_to_empty_list() -> None:
 
 def test_finds_class_id_by_name() -> None:
     assert find_class_id({0: "person", 73: "book"}, "book") == 73
+
+
+def test_book_detector_defaults_to_the_fine_tuned_checkpoint() -> None:
+    assert BOOK_DETECTOR_WEIGHTS_PATH == Path("models/book_detector.pt")
 
 
 @pytest.mark.slow
