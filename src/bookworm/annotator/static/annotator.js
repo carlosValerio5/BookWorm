@@ -644,19 +644,14 @@ function describeBoxChip(labeledBox, isSelected) {
   return isSelected && labeledBox.text ? `${labeledBox.box_type} · ${truncateText(labeledBox.text, CHIP_TEXT_MAX_LENGTH)}` : labeledBox.box_type;
 }
 
-function drawCornerHandles(context, rectangle, color) {
-  const corners = [
-    [rectangle.x, rectangle.y],
-    [rectangle.x + rectangle.width, rectangle.y],
-    [rectangle.x, rectangle.y + rectangle.height],
-    [rectangle.x + rectangle.width, rectangle.y + rectangle.height],
-  ];
+function drawResizeHandles(context, rectangle, color) {
   context.lineWidth = 1.5;
   context.strokeStyle = color;
   context.fillStyle = CANVAS_GROUND_COLOR;
-  corners.forEach(([cornerX, cornerY]) => {
-    context.fillRect(cornerX - 3, cornerY - 3, 6, 6);
-    context.strokeRect(cornerX - 3, cornerY - 3, 6, 6);
+  RESIZE_HANDLES.forEach((handle) => {
+    const { x, y } = resizeHandleCanvasPoint(handle, rectangle);
+    context.fillRect(x - 3, y - 3, 6, 6);
+    context.strokeRect(x - 3, y - 3, 6, 6);
   });
 }
 
@@ -673,7 +668,7 @@ function drawLabeledBox(context, { labeledBox, boxIndex, isSelected }, scale) {
   if (isSelected) {
     context.fillStyle = withAlpha(color, 0.12);
     context.fillRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
-    drawCornerHandles(context, rectangle, color);
+    drawResizeHandles(context, rectangle, color);
   }
   drawBoxChip(context, describeBoxChip(labeledBox, isSelected), color, rectangle, listChipObstacles(boxIndex, scale));
 }
