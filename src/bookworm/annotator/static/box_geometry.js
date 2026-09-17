@@ -62,7 +62,10 @@ function resizeBox(originalBox, handle, photoPoint) {
   return boxFromCorners({ x: nextXMin, y: nextYMin }, { x: nextXMax, y: nextYMax });
 }
 
-function chooseDragMode({ selectedBoxIndex, resizeHandle, boxIndexAtPoint }) {
+function chooseDragMode({ editMode, selectedBoxIndex, resizeHandle, boxIndexAtPoint }) {
+  if (editMode === "insert") {
+    return "draw";
+  }
   if (selectedBoxIndex !== null && resizeHandle !== null) {
     return "resize";
   }
