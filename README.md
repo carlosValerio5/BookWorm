@@ -161,7 +161,7 @@ Open `http://127.0.0.1:8765`, pick a photo and pick its class first (`1` isbn, `
 
 The annotator has two edit modes, like vim: **Normal** (the default) selects, moves and resizes boxes; **Insert** always starts a new box on drag, even on top of an existing one, so you can nest boxes (a `title` box inside a `book` box, for example). `Tab` toggles between them and `Escape` always cancels back to Normal, canceling any box you're mid-way through drawing.
 
-The "Detect books" button runs the existing YOLO `book` detector on the open photo and adds a box for each book it finds. These boxes render dashed until you've reviewed them; only the `book` class is detected today, other box types still need to be drawn by hand.
+The "Detect boxes" button runs the same detection the scanner uses (YOLO for `book` covers, barcode reading for `barcode`, and OCR for text) on the open photo. Text that reads as a valid ISBN becomes a `printed_isbn` box; every other recognized text region becomes an `other_text` box with its text already filled in. All of these render dashed until you've reviewed them. `title`, `author` and `publisher` still aren't detected automatically — OCR doesn't know which field is which — so switch an `other_text` box's type by hand once you know what it is.
 
 <p align="center">
   <img src="assets/annotator-labeling.png" alt="BookWorm Annotator: a dark desktop-style window with a back cover photo in the center, barcode and printed_isbn boxes drawn on it, and the class, box type and saved boxes panels on the right" width="900">
