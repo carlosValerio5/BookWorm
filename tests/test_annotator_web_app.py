@@ -192,18 +192,36 @@ def test_labeled_boxes_from_scan_orders_books_then_barcodes_then_texts() -> None
     ]
 
 
-def test_detections_endpoint_returns_boxes_from_the_book_detector(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(web_app, "load_book_detector", lambda: "stub-detector")
-    monkeypatch.setattr(
-        web_app,
-        "detect_books",
-        lambda _image, _book_detector: [BookDetection(confidence=0.87, box=BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4))],
+def test_detections_endpoint_merges_boxes_from_every_detector(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    scan_result = build_scan_result(
+        books=[BookDetection(confidence=0.87, box=BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4))],
+        barcodes=[IsbnBarcode(isbn="9780306406157", box=BoundingBox(x_min=5, y_min=6, x_max=7, y_max=8))],
+        texts=[
+            RecognizedText(text="ISBN 978-0-306-40615-7", confidence=0.9, box=BoundingBox(x_min=9, y_min=10, x_max=11, y_max=12)),
+            RecognizedText(text="El Buscón", confidence=0.9, box=BoundingBox(x_min=13, y_min=14, x_max=15, y_max=16)),
+        ],
     )
+    monkeypatch.setattr(web_app, "scan_image", lambda _photo_file, _book_detector, _text_reader: scan_result)
 
     response = client.get("/api/detections", params={"photo": PNG_PHOTO_PATH})
 
     assert response.status_code == 200
-    assert response.json() == [{"confidence": 0.87, "box": {"x_min": 1, "y_min": 2, "x_max": 3, "y_max": 4}}]
+    assert response.json() == [
+        {"box_type": "book", "box": {"x_min": 1, "y_min": 2, "x_max": 3, "y_max": 4}, "text": "", "confirmed": False},
+        {"box_type": "barcode", "box": {"x_min": 5, "y_min": 6, "x_max": 7, "y_max": 8}, "text": "", "confirmed": False},
+        {
+            "box_type": "printed_isbn",
+            "box": {"x_min": 9, "y_min": 10, "x_max": 11, "y_max": 12},
+            "text": "ISBN 978-0-306-40615-7",
+            "confirmed": False,
+        },
+        {
+            "box_type": "other_text",
+            "box": {"x_min": 13, "y_min": 14, "x_max": 15, "y_max": 16},
+            "text": "El Buscón",
+            "confirmed": False,
+        },
+    ]
 
 
 def test_detections_returns_404_for_missing_photo(client: TestClient) -> None:
@@ -215,8 +233,8 @@ def test_detections_rejects_path_outside_photos_folder(client: TestClient) -> No
 
 
 def test_detections_call_is_logged(client: TestClient, log_file_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(web_app, "load_book_detector", lambda: "stub-detector")
-    monkeypatch.setattr(web_app, "detect_books", lambda _image, _book_detector: [])
+    empty_scan_result = build_scan_result(books=[], barcodes=[], texts=[])
+    monkeypatch.setattr(web_app, "scan_image", lambda _photo_file, _book_detector, _text_reader: empty_scan_result)
 
     client.get("/api/detections", params={"photo": PNG_PHOTO_PATH})
 
