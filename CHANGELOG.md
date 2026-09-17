@@ -28,6 +28,7 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 
 ### Fixed
 - Dragging a selected box's corner handle now resizes that box instead of drawing a new one on top of it (B2).
+- Dragging a selected box's edge — not just one of its four corners — now resizes that edge instead of moving the whole box (B3).
 
 ## [0.1.0] - 2026-09-15
 
