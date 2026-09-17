@@ -37,6 +37,29 @@ def test_annotator_serves_app_on_localhost_only(tmp_path: Path, monkeypatch: pyt
     assert options == {"host": "127.0.0.1", "port": 9000, "log_config": None}
 
 
+def test_dashboard_serves_app_on_localhost_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    uvicorn_calls: list[tuple[object, dict[str, object]]] = []
+    monkeypatch.setattr(uvicorn, "run", lambda served_app, **options: uvicorn_calls.append((served_app, options)))
+
+    result = runner.invoke(app, ["dashboard", "--runs-dir", str(tmp_path / "runs"), "--port", "9001"])
+
+    assert result.exit_code == 0, result.output
+    served_app, options = uvicorn_calls[0]
+    assert isinstance(served_app, FastAPI)
+    assert options == {"host": "127.0.0.1", "port": 9001, "log_config": None}
+
+
+def test_dashboard_uses_default_runs_dir_and_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    uvicorn_calls: list[tuple[object, dict[str, object]]] = []
+    monkeypatch.setattr(uvicorn, "run", lambda served_app, **options: uvicorn_calls.append((served_app, options)))
+
+    result = runner.invoke(app, ["dashboard"])
+
+    assert result.exit_code == 0, result.output
+    _, options = uvicorn_calls[0]
+    assert options == {"host": "127.0.0.1", "port": cli.DEFAULT_DASHBOARD_PORT, "log_config": None}
+
+
 def test_scan_rejects_missing_image_path(tmp_path: Path) -> None:
     result = runner.invoke(app, ["scan", str(tmp_path / "missing.png")])
 
