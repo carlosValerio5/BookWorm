@@ -29,17 +29,47 @@
         <div id="charts" class="charts" hidden>
           <section class="pane-section chart-panel">
             <h2 class="pane-label">Loss <span class="group-count">train vs val</span></h2>
-            <svg id="loss-chart" class="chart" viewBox="0 0 640 220" preserveAspectRatio="none"></svg>
+            <div class="chart-wrap">
+              <svg id="loss-chart" class="chart" viewBox="0 0 640 220" preserveAspectRatio="none">
+                <g data-role="grid"></g>
+                <g data-role="baselines"></g>
+                <g data-role="series"></g>
+                <g data-role="dots"></g>
+                <g data-role="hover-dots"></g>
+                <line data-role="crosshair" class="chart-crosshair" hidden></line>
+                <rect data-role="hover-target" class="chart-hover-target" x="0" y="0" width="640" height="220"></rect>
+              </svg>
+              <div data-role="tooltip" class="chart-tooltip" hidden></div>
+            </div>
             <ul id="loss-legend" class="legend"></ul>
           </section>
 
           <section class="pane-section chart-panel">
-            <h2 class="pane-label">Accuracy <span class="group-count">validation only</span></h2>
-            <svg id="accuracy-chart" class="chart" viewBox="0 0 640 220" preserveAspectRatio="none"></svg>
+            <h2 class="pane-label">Accuracy <span class="group-count">validation, with pre-fine-tune baseline</span></h2>
+            <div class="chart-wrap">
+              <svg id="accuracy-chart" class="chart" viewBox="0 0 640 220" preserveAspectRatio="none">
+                <g data-role="grid"></g>
+                <g data-role="baselines"></g>
+                <g data-role="series"></g>
+                <g data-role="dots"></g>
+                <g data-role="hover-dots"></g>
+                <line data-role="crosshair" class="chart-crosshair" hidden></line>
+                <rect data-role="hover-target" class="chart-hover-target" x="0" y="0" width="640" height="220"></rect>
+              </svg>
+              <div data-role="tooltip" class="chart-tooltip" hidden></div>
+            </div>
             <ul id="accuracy-legend" class="legend"></ul>
           </section>
         </div>
       </main>
+
+      <aside class="run-pane" aria-label="Run">
+        <section class="pane-section">
+          <h2 class="pane-label">Parameters</h2>
+          <div id="run-params" class="param-list"></div>
+          <p id="run-params-empty" class="run-pane-empty">No run yet</p>
+        </section>
+      </aside>
 
       <footer class="status-bar">
         <span id="status-epoch" class="status-epoch"></span>
