@@ -2,10 +2,11 @@ import React, { createContext, useContext, useState } from 'react';
 
 export type Book = {
     id: string;
-    title: string;
-    author: string;
-    isbn: string;
-    coverImage: string;
+    title?: string;
+    author?: string;
+    isbn: string | null;
+    coverImage?: string;
+    recognizedText?: string;
 };
 
 type BookContextType = {

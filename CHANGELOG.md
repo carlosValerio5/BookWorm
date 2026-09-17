@@ -27,16 +27,22 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 - Dashboard home page: `bookworm dashboard` now opens on a list of every training run under `runs/` (`GET /api/runs`), most recently updated first, each showing its epoch progress and last-updated time. Clicking a run opens its charts/parameters at `#/run/<name>`; `/api/metrics` and `/api/run-info` take an optional `?run=` to scope to that run instead of always the latest (F4).
 - `bookworm train-yolo` gained a `--batch` option (default 4, down from ultralytics' own default of 16) so batch size is no longer fixed at whatever `model.train(...)` picks on its own (F5).
 - `bookworm scan`/`annotate`/`annotator` now detect books with `models/book_detector.pt`, fine-tuned on our own 7-class dataset (50 epochs on 41 labeled photos), instead of the base COCO `models/yolo26n.pt` (F6).
+- `bookworm serve` opens the BookWorm Mobile API (default `http://0.0.0.0:8000`) for the phone app to scan and live-detect against, mirroring the `annotator`/`dashboard` commands (F7).
+- Mobile app: the camera screen now shows a live gold bounding box over a framed book while aiming, backed by a new `WS /api/live-detect` endpoint that runs only the fine-tuned YOLO book detector (no OCR/barcode work) on downscaled snapshots taken a few times a second, dropping any snapshot still queued behind one being processed. The existing tap-to-scan flow is still the deliberate confirm step (F7).
 
 ### Changed
 - Terminal logs are readable `event key=value` lines, colored in a real terminal. `logs/bookworm.jsonl` still gets every event as JSON.
 - The annotator is redesigned in the style of Cursor's website: a warm dark window with the photo path in the title bar, a larger photo, photos grouped into "To label" and "Labeled" with box counts, a status bar with mode, box type, cursor pixels and a labeling timer, and box tags that avoid covering other boxes. Keyboard shortcuts and the class-first lock are unchanged.
 - `/api/photos` returns each photo's `box_count`.
+- Mobile app: `POST /api/scan` now runs the real `scan_image` pipeline (fine-tuned YOLO, EasyOCR, zxing) instead of always returning a hardcoded "Drácula" stub. The result sheet and biblioteca list show what was actually read (ISBN, OCR snippets) instead of assuming a title, author and cover image always exist — none of those are looked up yet (F7).
 
 ### Fixed
 - Dragging a selected box's corner handle now resizes that box instead of drawing a new one on top of it (B2).
 - Dragging a selected box's edge — not just one of its four corners — now resizes that edge instead of moving the whole box (B3).
 - A box could never be drawn inside or on top of an existing box, so nested regions (a `title` box inside a `book` box) couldn't be labeled at all. Fixed by the new Insert edit mode (B4).
+- Mobile app's API is now `bookworm.mobile.server`, not `bookworm.annotator.server` — it was never wired into the CLI, had no tests, and always returned the same fake book (B5).
+- Mobile app: tap-to-scan and live detection could call `takePictureAsync` before the camera hardware was actually ready, throwing `CameraNotReadyException` and silently starving live detection of every frame in that window. Both now wait for `onCameraReady` plus a short buffer (B6).
+- Mobile app: saving a scanned cover discarded the OCR text the model actually read, always showing "Portada sin identificar" in the biblioteca regardless of what was identified. The recognized text is now saved and shown (B6).
 
 ## [0.1.0] - 2026-09-15
 

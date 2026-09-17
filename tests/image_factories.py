@@ -70,3 +70,8 @@ def paste_on_blank_photo(
 def write_image(image_path: Path, image: np.ndarray) -> Path:
     cv2.imwrite(str(image_path), image)
     return image_path
+
+
+def encode_jpeg_bytes(image: np.ndarray) -> bytes:
+    _, encoded_image = cv2.imencode(".jpg", image)
+    return encoded_image.tobytes()

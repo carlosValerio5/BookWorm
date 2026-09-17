@@ -15,6 +15,7 @@ from bookworm.book_detection import load_book_detector
 from bookworm.drive_download import DriveDownloadError, download_drive_folder
 from bookworm.image_loading import load_image
 from bookworm.logging_setup import configure_logging, log_call
+from bookworm.mobile.server import create_mobile_app
 from bookworm.scan_classification import scan_image
 from bookworm.scan_types import ScanResult
 from bookworm.text_recognition import load_text_reader
@@ -34,10 +35,13 @@ ExistingImagePath = Annotated[Path, typer.Argument(exists=True, dir_okay=False, 
 ExistingDirectoryPath = Annotated[Path, typer.Argument(exists=True, file_okay=False, readable=True)]
 
 ANNOTATOR_HOST = "127.0.0.1"
+MOBILE_API_HOST = "0.0.0.0"
 DEFAULT_ANNOTATOR_PORT = 8765
 DEFAULT_DASHBOARD_PORT = 8766
+DEFAULT_MOBILE_PORT = 8000
 DEFAULT_LABELS_DIRECTORY = Path("labels")
 DEFAULT_DRIVE_OUTPUT_DIR = Path("dataset/drive")
+DEFAULT_MOBILE_PHOTOS_DIR = Path("dataset/photos")
 DEFAULT_YOLO_DATASET_DIR = Path("dataset/yolo")
 DEFAULT_RUNS_DIRECTORY = Path("runs")
 
@@ -85,6 +89,16 @@ def dashboard(
     """Open a local web app showing live loss and validation accuracy for the latest training run."""
     logger.info("dashboard_starting", runs_dir=str(runs_dir), url=f"http://{ANNOTATOR_HOST}:{port}")
     uvicorn.run(create_dashboard_app(runs_dir), host=ANNOTATOR_HOST, port=port, log_config=None)
+
+
+@app.command()
+def serve(
+    photos_dir: Annotated[Path, typer.Option(help="Folder where scanned photos are saved.")] = DEFAULT_MOBILE_PHOTOS_DIR,
+    port: Annotated[int, typer.Option(help="Port for the mobile API.")] = DEFAULT_MOBILE_PORT,
+) -> None:
+    """Serve the BookWorm Mobile API for the phone app to scan and live-detect against."""
+    logger.info("mobile_api_starting", photos_dir=str(photos_dir), url=f"http://{MOBILE_API_HOST}:{port}")
+    uvicorn.run(create_mobile_app(photos_dir), host=MOBILE_API_HOST, port=port, log_config=None)
 
 
 @app.command(name="fetch-drive")
