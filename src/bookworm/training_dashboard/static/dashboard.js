@@ -34,17 +34,25 @@ const PARAM_LABELS = {
 };
 const PARAM_ORDER = ["model", "data", "epochs", "batch", "imgsz", "optimizer", "lr0"];
 
+const appWindowElement = document.getElementById("app-window");
+const backButtonElement = document.getElementById("back-button");
 const runNameElement = document.getElementById("run-name");
 const epochStatusElement = document.getElementById("epoch-status");
+const viewListElement = document.getElementById("view-list");
+const viewRunElement = document.getElementById("view-run");
+const runsEmptyElement = document.getElementById("runs-empty");
+const runsListElement = document.getElementById("runs-list");
 const emptyStageElement = document.getElementById("empty-stage");
 const chartsElement = document.getElementById("charts");
 const lossLegendElement = document.getElementById("loss-legend");
 const accuracyLegendElement = document.getElementById("accuracy-legend");
 const statusEpochElement = document.getElementById("status-epoch");
 const statusPollElement = document.getElementById("status-poll");
+const runPaneElement = document.getElementById("run-pane");
 const runParamsElement = document.getElementById("run-params");
 const runParamsEmptyElement = document.getElementById("run-params-empty");
 
+let currentRoute = { view: "list" };
 let latestEpochs = [];
 let latestRunInfo = { run_name: null, params: {}, baseline: null };
 
@@ -332,8 +340,8 @@ function renderStage(epochs) {
   chartsElement.hidden = !hasEpochs;
 }
 
-function renderTitleBar(epochs, runInfo) {
-  runNameElement.textContent = runInfo.run_name ? `BookWorm Training Dashboard — ${runInfo.run_name}` : "BookWorm Training Dashboard";
+function renderRunTitleBar(epochs, runInfo) {
+  runNameElement.textContent = runInfo.run_name ?? currentRoute.name;
   if (epochs.length === 0) {
     epochStatusElement.textContent = "";
     statusEpochElement.textContent = "";
@@ -343,6 +351,12 @@ function renderTitleBar(epochs, runInfo) {
   const totalEpochs = runInfo.params.epochs;
   epochStatusElement.textContent = totalEpochs ? `Epoch ${lastEpoch} of ${totalEpochs}` : `Epoch ${lastEpoch}`;
   statusEpochElement.textContent = `${epochs.length} epoch${epochs.length === 1 ? "" : "s"} logged`;
+}
+
+function renderListTitleBar(runCount) {
+  runNameElement.textContent = "BookWorm Training Dashboard";
+  epochStatusElement.textContent = "";
+  statusEpochElement.textContent = runCount ? `${runCount} run${runCount === 1 ? "" : "s"}` : "";
 }
 
 function basename(path) {
@@ -373,9 +387,9 @@ function renderRunParams(params) {
   runParamsEmptyElement.hidden = knownKeys.length > 0;
 }
 
-function render() {
+function renderRunView() {
   renderStage(latestEpochs);
-  renderTitleBar(latestEpochs, latestRunInfo);
+  renderRunTitleBar(latestEpochs, latestRunInfo);
   renderRunParams(latestRunInfo.params);
   if (latestEpochs.length > 0) {
     renderLossChart(latestEpochs);
@@ -383,33 +397,134 @@ function render() {
   }
 }
 
-async function fetchMetrics() {
-  const response = await fetch("/api/metrics");
-  return response.ok ? response.json() : [];
-}
-
-async function fetchRunInfo() {
-  const response = await fetch("/api/run-info");
-  return response.ok ? response.json() : { run_name: null, params: {}, baseline: null };
-}
-
-async function pollMetrics() {
-  latestEpochs = await fetchMetrics();
-  render();
+function markUpdated() {
   statusPollElement.textContent = `updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
 }
 
+function formatRelativeTime(epochSeconds) {
+  const deltaSeconds = Math.max(0, Date.now() / 1000 - epochSeconds);
+  if (deltaSeconds < 60) {
+    return "just now";
+  }
+  if (deltaSeconds < 3600) {
+    return `${Math.floor(deltaSeconds / 60)}m ago`;
+  }
+  if (deltaSeconds < 86400) {
+    return `${Math.floor(deltaSeconds / 3600)}h ago`;
+  }
+  return `${Math.floor(deltaSeconds / 86400)}d ago`;
+}
+
+function buildRunProgressText(run) {
+  return run.total_epochs
+    ? `epoch ${run.last_epoch} of ${run.total_epochs}`
+    : `${run.epoch_count} epoch${run.epoch_count === 1 ? "" : "s"}`;
+}
+
+function buildRunRow(run) {
+  const item = document.createElement("li");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "run-row";
+  const name = document.createElement("span");
+  name.className = "run-row-name";
+  name.textContent = run.name;
+  const progress = document.createElement("span");
+  progress.className = "run-row-meta";
+  progress.textContent = buildRunProgressText(run);
+  const updated = document.createElement("span");
+  updated.className = "run-row-meta";
+  updated.textContent = formatRelativeTime(run.updated_at);
+  button.append(name, progress, updated);
+  button.addEventListener("click", () => navigateToRun(run.name));
+  item.append(button);
+  return item;
+}
+
+function renderRunsList(runs) {
+  const hasRuns = runs.length > 0;
+  runsEmptyElement.hidden = hasRuns;
+  runsListElement.hidden = !hasRuns;
+  runsListElement.replaceChildren(...runs.map(buildRunRow));
+  renderListTitleBar(runs.length);
+}
+
+function parseRoute() {
+  const match = window.location.hash.match(/^#\/run\/(.+)$/);
+  return match ? { view: "run", name: decodeURIComponent(match[1]) } : { view: "list" };
+}
+
+function navigateToRun(name) {
+  window.location.hash = `#/run/${encodeURIComponent(name)}`;
+}
+
+function navigateToList() {
+  window.location.hash = "";
+}
+
+async function fetchRuns() {
+  const response = await fetch("/api/runs");
+  return response.ok ? response.json() : [];
+}
+
+async function fetchMetrics(runName) {
+  const query = runName ? `?run=${encodeURIComponent(runName)}` : "";
+  const response = await fetch(`/api/metrics${query}`);
+  return response.ok ? response.json() : [];
+}
+
+async function fetchRunInfo(runName) {
+  const query = runName ? `?run=${encodeURIComponent(runName)}` : "";
+  const response = await fetch(`/api/run-info${query}`);
+  return response.ok ? response.json() : { run_name: null, params: {}, baseline: null };
+}
+
+async function pollRunsList() {
+  renderRunsList(await fetchRuns());
+  markUpdated();
+}
+
+async function pollMetrics() {
+  latestEpochs = await fetchMetrics(currentRoute.name);
+  renderRunView();
+  markUpdated();
+}
+
 async function pollRunInfo() {
-  latestRunInfo = await fetchRunInfo();
-  render();
+  latestRunInfo = await fetchRunInfo(currentRoute.name);
+  renderRunView();
 }
 
 function pollDashboard() {
+  if (currentRoute.view === "list") {
+    pollRunsList().catch(() => {
+      statusPollElement.textContent = "Could not reach the dashboard server";
+    });
+    return;
+  }
   pollMetrics().catch(() => {
     statusPollElement.textContent = "Could not reach the dashboard server";
   });
   pollRunInfo().catch(() => {});
 }
 
+function applyRoute() {
+  currentRoute = parseRoute();
+  const isRunView = currentRoute.view === "run";
+  viewListElement.hidden = isRunView;
+  viewRunElement.hidden = !isRunView;
+  runPaneElement.hidden = !isRunView;
+  backButtonElement.hidden = !isRunView;
+  appWindowElement.classList.toggle("list-view", !isRunView);
+  if (isRunView) {
+    latestEpochs = [];
+    latestRunInfo = { run_name: null, params: {}, baseline: null };
+    renderRunView();
+  }
+  pollDashboard();
+}
+
+backButtonElement.addEventListener("click", navigateToList);
+window.addEventListener("hashchange", applyRoute);
+applyRoute();
 window.setInterval(pollDashboard, POLL_INTERVAL_MILLISECONDS);
-pollDashboard();

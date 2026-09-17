@@ -22,13 +22,19 @@ class EpochMetrics:
     val_metrics: dict[str, float]
 
 
-def find_latest_results_csv(runs_dir: Path) -> Path | None:
+def find_all_results_csvs(runs_dir: Path) -> list[Path]:
     if not runs_dir.is_dir():
-        return None
-    results_csv_paths = list(runs_dir.rglob(RESULTS_CSV_NAME))
-    if not results_csv_paths:
-        return None
-    return max(results_csv_paths, key=lambda path: path.stat().st_mtime)
+        return []
+    return sorted(runs_dir.rglob(RESULTS_CSV_NAME), key=lambda path: path.stat().st_mtime, reverse=True)
+
+
+def find_latest_results_csv(runs_dir: Path) -> Path | None:
+    results_csv_paths = find_all_results_csvs(runs_dir)
+    return results_csv_paths[0] if results_csv_paths else None
+
+
+def find_results_csv_by_run_name(runs_dir: Path, run_name: str) -> Path | None:
+    return next((path for path in find_all_results_csvs(runs_dir) if path.parent.name == run_name), None)
 
 
 def strip_prefix_keys(row: dict[str, str], prefix: str) -> dict[str, float]:

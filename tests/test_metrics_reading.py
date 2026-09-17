@@ -2,7 +2,13 @@ import os
 import time
 from pathlib import Path
 
-from bookworm.training_dashboard.metrics_reading import EpochMetrics, find_latest_results_csv, read_epoch_metrics
+from bookworm.training_dashboard.metrics_reading import (
+    EpochMetrics,
+    find_all_results_csvs,
+    find_latest_results_csv,
+    find_results_csv_by_run_name,
+    read_epoch_metrics,
+)
 
 RESULTS_CSV_HEADER = (
     "epoch,time,train/box_loss,train/cls_loss,train/dfl_loss,"
@@ -43,6 +49,33 @@ def test_find_latest_results_csv_picks_the_most_recently_modified_run(tmp_path: 
     os.utime(newer_csv, (now, now))
 
     assert find_latest_results_csv(tmp_path / "runs") == newer_csv
+
+
+def test_find_all_results_csvs_returns_empty_list_when_no_run_exists(tmp_path: Path) -> None:
+    assert find_all_results_csvs(tmp_path / "runs") == []
+
+
+def test_find_all_results_csvs_sorts_most_recently_modified_first(tmp_path: Path) -> None:
+    older_csv = write_results_csv(tmp_path / "runs" / "detect" / "train", ["1,1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1"])
+    newer_csv = write_results_csv(tmp_path / "runs" / "detect" / "train2", ["1,1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1"])
+    now = time.time()
+    os.utime(older_csv, (now - 100, now - 100))
+    os.utime(newer_csv, (now, now))
+
+    assert find_all_results_csvs(tmp_path / "runs") == [newer_csv, older_csv]
+
+
+def test_find_results_csv_by_run_name_returns_none_when_not_found(tmp_path: Path) -> None:
+    write_results_csv(tmp_path / "runs" / "detect" / "train", ["1,1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1"])
+
+    assert find_results_csv_by_run_name(tmp_path / "runs", "train2") is None
+
+
+def test_find_results_csv_by_run_name_returns_the_matching_run(tmp_path: Path) -> None:
+    write_results_csv(tmp_path / "runs" / "detect" / "train", ["1,1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1"])
+    train2_csv = write_results_csv(tmp_path / "runs" / "detect" / "train2", ["1,1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1"])
+
+    assert find_results_csv_by_run_name(tmp_path / "runs", "train2") == train2_csv
 
 
 def test_read_epoch_metrics_groups_columns_by_prefix(tmp_path: Path) -> None:

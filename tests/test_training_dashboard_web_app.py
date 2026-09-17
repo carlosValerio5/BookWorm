@@ -97,6 +97,76 @@ def test_metrics_endpoint_reflects_the_most_recently_modified_run(client: TestCl
     assert response.json()[0]["epoch"] == 7
 
 
+def test_metrics_endpoint_scopes_to_the_requested_run(client: TestClient, runs_dir: Path) -> None:
+    write_results_csv(runs_dir / "detect" / "train", ["1,1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1"])
+    write_results_csv(runs_dir / "detect" / "train2", ["7,1,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2"])
+
+    response = client.get("/api/metrics", params={"run": "train"})
+
+    assert response.status_code == 200
+    assert response.json()[0]["epoch"] == 1
+
+
+def test_metrics_endpoint_returns_empty_list_for_an_unknown_run(client: TestClient, runs_dir: Path) -> None:
+    write_results_csv(runs_dir / "detect" / "train", ["1,1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1"])
+
+    response = client.get("/api/metrics", params={"run": "does-not-exist"})
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_runs_endpoint_returns_empty_list_before_any_run(client: TestClient) -> None:
+    response = client.get("/api/runs")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_runs_endpoint_lists_every_run_most_recent_first(client: TestClient, runs_dir: Path) -> None:
+    import os
+    import time
+
+    older_csv = write_results_csv(runs_dir / "detect" / "train", ["1,1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1"])
+    write_args_yaml(runs_dir / "detect" / "train", "epochs: 5\n")
+    newer_csv = write_results_csv(runs_dir / "detect" / "train2", ["3,1,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2"])
+    now = time.time()
+    os.utime(older_csv, (now - 100, now - 100))
+    os.utime(newer_csv, (now, now))
+
+    response = client.get("/api/runs")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [run["name"] for run in body] == ["train2", "train"]
+    assert body[1] == {"name": "train", "last_epoch": 1, "epoch_count": 1, "total_epochs": 5, "updated_at": pytest.approx(older_csv.stat().st_mtime)}
+    assert body[0]["last_epoch"] == 3
+    assert body[0]["total_epochs"] is None
+
+
+def test_run_info_scopes_to_the_requested_run(client: TestClient, runs_dir: Path) -> None:
+    write_results_csv(runs_dir / "detect" / "train", ["1,1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1"])
+    write_args_yaml(runs_dir / "detect" / "train", "epochs: 5\n")
+    write_results_csv(runs_dir / "detect" / "train2", ["3,1,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2"])
+    write_args_yaml(runs_dir / "detect" / "train2", "epochs: 50\n")
+
+    response = client.get("/api/run-info", params={"run": "train"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["run_name"] == "train"
+    assert body["params"] == {"epochs": 5}
+
+
+def test_run_info_returns_empty_shape_for_an_unknown_run(client: TestClient, runs_dir: Path) -> None:
+    write_results_csv(runs_dir / "detect" / "train", ["1,1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1"])
+
+    response = client.get("/api/run-info", params={"run": "does-not-exist"})
+
+    assert response.status_code == 200
+    assert response.json() == {"run_name": None, "params": {}, "baseline": None}
+
+
 def test_run_info_returns_empty_shape_before_any_run(client: TestClient) -> None:
     response = client.get("/api/run-info")
 
