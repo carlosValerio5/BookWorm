@@ -1,0 +1,247 @@
+:root {
+  color-scheme: dark;
+  --ground: #14120b;
+  --surface-1: #1b1913;
+  --surface-2: #201e18;
+  --text: #edecec;
+  --text-2: color-mix(in oklab, var(--text) 60%, transparent);
+  --text-3: color-mix(in oklab, var(--text) 50%, transparent);
+  --line-1: color-mix(in oklab, var(--text) 2.5%, transparent);
+  --line-2: color-mix(in oklab, var(--text) 10%, transparent);
+  --line-3: color-mix(in oklab, var(--text) 20%, transparent);
+  --accent: #f54e00;
+  --good: #1f8a65;
+  --bad: #cf2d56;
+  --train-color: #9fbbe0;
+  --val-color: #f54e00;
+  --font-sans: system-ui, -apple-system, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-window: 12px;
+  --radius-row: 8px;
+  --radius-pill: 999px;
+  font: 13px/1.45 var(--font-sans);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 10px;
+  overflow: hidden;
+  background: var(--ground);
+}
+
+p,
+h1,
+h2 {
+  margin: 0;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 3px 5px;
+  font: 500 11px/1 var(--font-mono);
+  color: var(--text-2);
+  background: var(--line-1);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+}
+
+.app-window {
+  display: grid;
+  grid-template-rows: 40px minmax(0, 1fr) 30px;
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-window);
+  box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.7);
+}
+
+.title-bar {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) minmax(0, auto) minmax(96px, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.traffic-lights {
+  display: flex;
+  gap: 8px;
+}
+
+.traffic-lights span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--line-3);
+}
+
+.window-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.title-run {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  min-width: 0;
+}
+
+.epoch-status {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.dashboard-body {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--ground);
+}
+
+.empty-stage {
+  display: grid;
+  place-self: center;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--text-2);
+}
+
+.empty-stage-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+  padding: 14px;
+  align-content: start;
+}
+
+.chart-panel {
+  padding: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-row);
+}
+
+.pane-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.group-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+
+.chart {
+  width: 100%;
+  height: 220px;
+  overflow: visible;
+}
+
+.chart-grid-line {
+  stroke: var(--line-2);
+  stroke-width: 1;
+}
+
+.chart-line {
+  fill: none;
+  stroke-width: 1.6;
+}
+
+.chart-line.is-train {
+  stroke: var(--train-color);
+}
+
+.chart-line.is-val {
+  stroke: var(--val-color);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.legend-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--text-2);
+  border-top: 1px solid var(--line-2);
+}
+
+.status-poll {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}

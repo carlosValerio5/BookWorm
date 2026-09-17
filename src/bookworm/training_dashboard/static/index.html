@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>BookWorm Training Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314120b'/%3E%3Crect x='8' y='8' width='16' height='16' rx='2' fill='none' stroke='%23edecec' stroke-width='2'/%3E%3Ccircle cx='24' cy='8' r='3' fill='%23f54e00'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/static/dashboard.css">
+  </head>
+  <body>
+    <div class="app-window">
+      <header class="title-bar">
+        <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="window-title">
+          <h1 id="run-name" class="title-run">BookWorm Training Dashboard</h1>
+        </div>
+        <div class="title-meta">
+          <span id="epoch-status" class="epoch-status" role="status"></span>
+        </div>
+      </header>
+
+      <main class="dashboard-body">
+        <div id="empty-stage" class="empty-stage">
+          <p class="empty-stage-title">Waiting for a training run</p>
+          <p class="empty-stage-hint">Start one with <kbd>bookworm train-yolo DATASET_YAML</kbd></p>
+        </div>
+
+        <div id="charts" class="charts" hidden>
+          <section class="pane-section chart-panel">
+            <h2 class="pane-label">Loss <span class="group-count">train vs val</span></h2>
+            <svg id="loss-chart" class="chart" viewBox="0 0 640 220" preserveAspectRatio="none"></svg>
+            <ul id="loss-legend" class="legend"></ul>
+          </section>
+
+          <section class="pane-section chart-panel">
+            <h2 class="pane-label">Accuracy <span class="group-count">validation only</span></h2>
+            <svg id="accuracy-chart" class="chart" viewBox="0 0 640 220" preserveAspectRatio="none"></svg>
+            <ul id="accuracy-legend" class="legend"></ul>
+          </section>
+        </div>
+      </main>
+
+      <footer class="status-bar">
+        <span id="status-epoch" class="status-epoch"></span>
+        <span id="status-poll" class="status-poll"></span>
+      </footer>
+    </div>
+    <script src="/static/dashboard.js"></script>
+  </body>
+</html>
