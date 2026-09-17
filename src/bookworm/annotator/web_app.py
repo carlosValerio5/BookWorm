@@ -28,11 +28,14 @@ from bookworm.annotator.annotation_storage import (
     resolve_photo_path,
     save_annotation,
 )
-from bookworm.annotator.annotation_types import AnnotationDraft, LabeledBox, PhotoAnnotation
-from bookworm.book_detection import detect_books, load_book_detector
+from bookworm.annotator.annotation_types import AnnotationDraft, BoxType, LabeledBox, PhotoAnnotation
+from bookworm.book_detection import load_book_detector
 from bookworm.image_loading import ImageLoadError, load_image
+from bookworm.isbn_validation import extract_isbn_from_text
 from bookworm.logging_setup import log_call
-from bookworm.scan_types import BookDetection
+from bookworm.scan_classification import scan_image
+from bookworm.scan_types import ScanResult
+from bookworm.text_recognition import load_text_reader
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -66,10 +69,10 @@ def create_annotator_app(photos_dir: Path, labels_dir: Path) -> FastAPI:
         return Response(content=jpeg_bytes, media_type="image/jpeg")
 
     @app.get("/api/detections")
-    def get_photo_detections(photo: str) -> list[BookDetection]:
+    def get_photo_detections(photo: str) -> list[LabeledBox]:
         photo_file = find_photo_file(photos_dir, photo)
         with log_call(logger, "get_photo_detections", photo_path=photo):
-            return detect_books(load_image(photo_file), load_book_detector())
+            return labeled_boxes_from_scan(scan_image(photo_file, load_book_detector(), load_text_reader()))
 
     @app.get("/api/annotation")
     def get_photo_annotation(photo: str) -> PhotoAnnotation:
@@ -101,6 +104,22 @@ def encode_jpeg(image: np.ndarray) -> bytes:
     if not was_encoded:
         raise ImageEncodeError("Could not encode the photo as JPEG")
     return jpeg_buffer.tobytes()
+
+
+def box_type_for_recognized_text(text: str) -> BoxType:
+    return BoxType.PRINTED_ISBN if extract_isbn_from_text(text) is not None else BoxType.OTHER_TEXT
+
+
+def labeled_boxes_from_scan(scan_result: ScanResult) -> list[LabeledBox]:
+    book_boxes = [LabeledBox(box_type=BoxType.BOOK, box=book.box, text="", confirmed=False) for book in scan_result.books]
+    barcode_boxes = [
+        LabeledBox(box_type=BoxType.BARCODE, box=barcode.box, text="", confirmed=False) for barcode in scan_result.barcodes
+    ]
+    text_boxes = [
+        LabeledBox(box_type=box_type_for_recognized_text(text.text), box=text.box, text=text.text, confirmed=False)
+        for text in scan_result.texts
+    ]
+    return [*book_boxes, *barcode_boxes, *text_boxes]
 
 
 def count_box_types(boxes: list[LabeledBox]) -> dict[str, int]:

@@ -2,15 +2,18 @@ import json
 from pathlib import Path
 
 import cv2
+import easyocr
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from image_factories import create_blank_image, write_heic_image, write_image
+from ultralytics import YOLO
 
 from bookworm.annotator import web_app
-from bookworm.annotator.web_app import create_annotator_app
+from bookworm.annotator.annotation_types import BoxType, LabeledBox
+from bookworm.annotator.web_app import box_type_for_recognized_text, create_annotator_app, labeled_boxes_from_scan
 from bookworm.logging_setup import configure_logging
-from bookworm.scan_types import BookDetection, BoundingBox
+from bookworm.scan_types import BookDetection, BoundingBox, IsbnBarcode, RecognizedText, ScanKind, ScanResult
 
 PNG_PHOTO_PATH = "cover/blank.png"
 HEIC_PHOTO_PATH = "iphone.heic"
@@ -119,18 +122,108 @@ def test_image_returns_422_for_file_that_is_not_an_image(client: TestClient, pho
     assert client.get("/api/image", params={"photo": "broken.jpg"}).status_code == 422
 
 
-def test_detections_endpoint_returns_boxes_from_the_book_detector(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(web_app, "load_book_detector", lambda: "stub-detector")
-    monkeypatch.setattr(
-        web_app,
-        "detect_books",
-        lambda _image, _book_detector: [BookDetection(confidence=0.87, box=BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4))],
+ANY_BOX = BoundingBox(x_min=0, y_min=0, x_max=10, y_max=10)
+
+
+def build_scan_result(
+    books: list[BookDetection], barcodes: list[IsbnBarcode], texts: list[RecognizedText]
+) -> ScanResult:
+    return ScanResult(
+        scan_id="any-scan-id",
+        image_path="any/image.jpg",
+        kind=ScanKind.UNKNOWN,
+        isbn=None,
+        books=books,
+        barcodes=barcodes,
+        texts=texts,
     )
+
+
+def test_box_type_for_recognized_text_detects_isbn() -> None:
+    assert box_type_for_recognized_text("ISBN 978-0-306-40615-7") == BoxType.PRINTED_ISBN
+
+
+def test_box_type_for_recognized_text_defaults_to_other_text() -> None:
+    assert box_type_for_recognized_text("El Buscón") == BoxType.OTHER_TEXT
+
+
+def test_labeled_boxes_from_scan_maps_a_book_with_empty_text() -> None:
+    scan_result = build_scan_result(books=[BookDetection(confidence=0.9, box=ANY_BOX)], barcodes=[], texts=[])
+
+    assert labeled_boxes_from_scan(scan_result) == [LabeledBox(box_type=BoxType.BOOK, box=ANY_BOX, text="", confirmed=False)]
+
+
+def test_labeled_boxes_from_scan_maps_a_barcode_with_empty_text() -> None:
+    scan_result = build_scan_result(books=[], barcodes=[IsbnBarcode(isbn="9780306406157", box=ANY_BOX)], texts=[])
+
+    assert labeled_boxes_from_scan(scan_result) == [LabeledBox(box_type=BoxType.BARCODE, box=ANY_BOX, text="", confirmed=False)]
+
+
+def test_labeled_boxes_from_scan_maps_isbn_bearing_text_to_printed_isbn() -> None:
+    isbn_text = "ISBN 978-0-306-40615-7"
+    scan_result = build_scan_result(books=[], barcodes=[], texts=[RecognizedText(text=isbn_text, confidence=0.9, box=ANY_BOX)])
+
+    assert labeled_boxes_from_scan(scan_result) == [
+        LabeledBox(box_type=BoxType.PRINTED_ISBN, box=ANY_BOX, text=isbn_text, confirmed=False)
+    ]
+
+
+def test_labeled_boxes_from_scan_maps_plain_text_to_other_text() -> None:
+    scan_result = build_scan_result(books=[], barcodes=[], texts=[RecognizedText(text="El Buscón", confidence=0.9, box=ANY_BOX)])
+
+    assert labeled_boxes_from_scan(scan_result) == [
+        LabeledBox(box_type=BoxType.OTHER_TEXT, box=ANY_BOX, text="El Buscón", confirmed=False)
+    ]
+
+
+def test_labeled_boxes_from_scan_returns_empty_list_for_empty_scan() -> None:
+    assert labeled_boxes_from_scan(build_scan_result(books=[], barcodes=[], texts=[])) == []
+
+
+def test_labeled_boxes_from_scan_orders_books_then_barcodes_then_texts() -> None:
+    scan_result = build_scan_result(
+        books=[BookDetection(confidence=0.9, box=ANY_BOX)],
+        barcodes=[IsbnBarcode(isbn="9780306406157", box=ANY_BOX)],
+        texts=[RecognizedText(text="El Buscón", confidence=0.9, box=ANY_BOX)],
+    )
+
+    assert [labeled_box.box_type for labeled_box in labeled_boxes_from_scan(scan_result)] == [
+        BoxType.BOOK,
+        BoxType.BARCODE,
+        BoxType.OTHER_TEXT,
+    ]
+
+
+def test_detections_endpoint_merges_boxes_from_every_detector(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    scan_result = build_scan_result(
+        books=[BookDetection(confidence=0.87, box=BoundingBox(x_min=1, y_min=2, x_max=3, y_max=4))],
+        barcodes=[IsbnBarcode(isbn="9780306406157", box=BoundingBox(x_min=5, y_min=6, x_max=7, y_max=8))],
+        texts=[
+            RecognizedText(text="ISBN 978-0-306-40615-7", confidence=0.9, box=BoundingBox(x_min=9, y_min=10, x_max=11, y_max=12)),
+            RecognizedText(text="El Buscón", confidence=0.9, box=BoundingBox(x_min=13, y_min=14, x_max=15, y_max=16)),
+        ],
+    )
+    monkeypatch.setattr(web_app, "scan_image", lambda _photo_file, _book_detector, _text_reader: scan_result)
 
     response = client.get("/api/detections", params={"photo": PNG_PHOTO_PATH})
 
     assert response.status_code == 200
-    assert response.json() == [{"confidence": 0.87, "box": {"x_min": 1, "y_min": 2, "x_max": 3, "y_max": 4}}]
+    assert response.json() == [
+        {"box_type": "book", "box": {"x_min": 1, "y_min": 2, "x_max": 3, "y_max": 4}, "text": "", "confirmed": False},
+        {"box_type": "barcode", "box": {"x_min": 5, "y_min": 6, "x_max": 7, "y_max": 8}, "text": "", "confirmed": False},
+        {
+            "box_type": "printed_isbn",
+            "box": {"x_min": 9, "y_min": 10, "x_max": 11, "y_max": 12},
+            "text": "ISBN 978-0-306-40615-7",
+            "confirmed": False,
+        },
+        {
+            "box_type": "other_text",
+            "box": {"x_min": 13, "y_min": 14, "x_max": 15, "y_max": 16},
+            "text": "El Buscón",
+            "confirmed": False,
+        },
+    ]
 
 
 def test_detections_returns_404_for_missing_photo(client: TestClient) -> None:
@@ -142,8 +235,8 @@ def test_detections_rejects_path_outside_photos_folder(client: TestClient) -> No
 
 
 def test_detections_call_is_logged(client: TestClient, log_file_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(web_app, "load_book_detector", lambda: "stub-detector")
-    monkeypatch.setattr(web_app, "detect_books", lambda _image, _book_detector: [])
+    empty_scan_result = build_scan_result(books=[], barcodes=[], texts=[])
+    monkeypatch.setattr(web_app, "scan_image", lambda _photo_file, _book_detector, _text_reader: empty_scan_result)
 
     client.get("/api/detections", params={"photo": PNG_PHOTO_PATH})
 
@@ -152,7 +245,9 @@ def test_detections_call_is_logged(client: TestClient, log_file_path: Path, monk
 
 
 @pytest.mark.slow
-def test_detections_endpoint_with_real_detector_finds_no_books_in_a_blank_photo(client: TestClient) -> None:
+def test_detections_endpoint_with_real_detectors_finds_nothing_in_a_blank_photo(
+    client: TestClient, book_detector: YOLO, text_reader: easyocr.Reader
+) -> None:
     response = client.get("/api/detections", params={"photo": PNG_PHOTO_PATH})
 
     assert response.status_code == 200
