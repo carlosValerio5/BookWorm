@@ -41,6 +41,8 @@ Every release has a git tag named `vMAJOR.MINOR.PATCH` that matches the version 
 - Dragging a selected box's edge — not just one of its four corners — now resizes that edge instead of moving the whole box (B3).
 - A box could never be drawn inside or on top of an existing box, so nested regions (a `title` box inside a `book` box) couldn't be labeled at all. Fixed by the new Insert edit mode (B4).
 - Mobile app's API is now `bookworm.mobile.server`, not `bookworm.annotator.server` — it was never wired into the CLI, had no tests, and always returned the same fake book (B5).
+- Mobile app: tap-to-scan and live detection could call `takePictureAsync` before the camera hardware was actually ready, throwing `CameraNotReadyException` and silently starving live detection of every frame in that window. Both now wait for `onCameraReady` plus a short buffer (B6).
+- Mobile app: saving a scanned cover discarded the OCR text the model actually read, always showing "Portada sin identificar" in the biblioteca regardless of what was identified. The recognized text is now saved and shown (B6).
 
 ## [0.1.0] - 2026-09-15
 
