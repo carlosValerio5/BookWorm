@@ -709,6 +709,30 @@ svg {
   border-radius: 50%;
 }
 
+.status-edit-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.status-edit-mode::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--text-2);
+  border-radius: 50%;
+}
+
+.status-edit-mode.is-insert {
+  color: var(--accent);
+}
+
+.status-edit-mode.is-insert::before {
+  background: var(--accent);
+}
+
 .status-type {
   display: inline-flex;
   align-items: center;
