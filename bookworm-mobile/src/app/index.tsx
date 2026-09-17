@@ -20,7 +20,8 @@ export default function HomeScreen() {
 
   const cameraRef = useRef<any>(null);
   const [previewSize, setPreviewSize] = useState<Size | null>(null);
-  const { box: liveBox, frameSize: liveFrameSize } = useLiveDetection(cameraRef, isCameraActive);
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const { box: liveBox, frameSize: liveFrameSize } = useLiveDetection(cameraRef, isCameraActive && isCameraReady);
   const [foundBook, setFoundBook] = useState<ScanResult | null>(null);
   const { addBook } = useBooks();
 
@@ -32,11 +33,12 @@ export default function HomeScreen() {
   const encenderCamara = async () => {
     setErrorMessage(null);
     if (!permission?.granted) await requestPermission();
+    setIsCameraReady(false);
     setIsCameraActive(true);
   };
 
   const escanearLibroReal = async () => {
-    if (loading) return;
+    if (loading || !isCameraReady) return;
     setLoading(true);
     setErrorMessage(null);
 
@@ -105,7 +107,12 @@ export default function HomeScreen() {
           <View style={styles.cameraBoxActive} onLayout={handleCameraLayout}>
             {permission?.granted ? (
               <>
-                <CameraView style={styles.camera} facing="back" ref={cameraRef} />
+                <CameraView
+                  style={styles.camera}
+                  facing="back"
+                  ref={cameraRef}
+                  onCameraReady={() => setIsCameraReady(true)}
+                />
                 {liveBox && liveFrameSize && previewSize && (
                   <View
                     pointerEvents="none"
