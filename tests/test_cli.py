@@ -154,6 +154,7 @@ def test_train_yolo_command_uses_default_options(tmp_path: Path, monkeypatch: py
             "base_weights": cli.DEFAULT_BASE_WEIGHTS,
             "epochs": cli.DEFAULT_TRAINING_EPOCHS,
             "image_size": cli.DEFAULT_TRAINING_IMAGE_SIZE,
+            "batch_size": cli.DEFAULT_TRAINING_BATCH_SIZE,
         }
     ]
     assert json.loads(result.stdout) == {"best_weights": str(best_weights_path)}
@@ -182,6 +183,8 @@ def test_train_yolo_command_passes_through_explicit_options(tmp_path: Path, monk
             "320",
             "--base-weights",
             str(tmp_path / "custom.pt"),
+            "--batch",
+            "4",
         ],
     )
 
@@ -192,6 +195,7 @@ def test_train_yolo_command_passes_through_explicit_options(tmp_path: Path, monk
             "base_weights": tmp_path / "custom.pt",
             "epochs": 10,
             "image_size": 320,
+            "batch_size": 4,
         }
     ]
 
