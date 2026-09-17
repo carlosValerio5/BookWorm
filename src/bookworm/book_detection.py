@@ -11,7 +11,7 @@ from bookworm.scan_types import BookDetection, BoundingBox
 
 logger = structlog.stdlib.get_logger(__name__)
 
-BOOK_DETECTOR_WEIGHTS_PATH = Path("models/yolo26n.pt")
+BOOK_DETECTOR_WEIGHTS_PATH = Path("models/book_detector.pt")
 COCO_BOOK_CLASS_NAME = "book"
 MINIMUM_BOOK_CONFIDENCE = 0.25
 
