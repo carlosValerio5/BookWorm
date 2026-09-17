@@ -18,6 +18,7 @@ from bookworm.logging_setup import configure_logging, log_call
 from bookworm.scan_classification import scan_image
 from bookworm.scan_types import ScanResult
 from bookworm.text_recognition import load_text_reader
+from bookworm.training_dashboard.web_app import create_dashboard_app
 from bookworm.yolo_dataset import build_yolo_dataset
 from bookworm.yolo_training import DEFAULT_BASE_WEIGHTS
 from bookworm.yolo_training import DEFAULT_EPOCHS as DEFAULT_TRAINING_EPOCHS
@@ -33,9 +34,11 @@ ExistingDirectoryPath = Annotated[Path, typer.Argument(exists=True, file_okay=Fa
 
 ANNOTATOR_HOST = "127.0.0.1"
 DEFAULT_ANNOTATOR_PORT = 8765
+DEFAULT_DASHBOARD_PORT = 8766
 DEFAULT_LABELS_DIRECTORY = Path("labels")
 DEFAULT_DRIVE_OUTPUT_DIR = Path("dataset/drive")
 DEFAULT_YOLO_DATASET_DIR = Path("dataset/yolo")
+DEFAULT_RUNS_DIRECTORY = Path("runs")
 
 
 class ImageWriteError(Exception):
@@ -71,6 +74,16 @@ def annotator(
         url=f"http://{ANNOTATOR_HOST}:{port}",
     )
     uvicorn.run(create_annotator_app(photos_dir, labels_dir), host=ANNOTATOR_HOST, port=port, log_config=None)
+
+
+@app.command()
+def dashboard(
+    runs_dir: Annotated[Path, typer.Option(help="Folder with YOLO training runs.")] = DEFAULT_RUNS_DIRECTORY,
+    port: Annotated[int, typer.Option(help="Port for the local web app.")] = DEFAULT_DASHBOARD_PORT,
+) -> None:
+    """Open a local web app showing live loss and validation accuracy for the latest training run."""
+    logger.info("dashboard_starting", runs_dir=str(runs_dir), url=f"http://{ANNOTATOR_HOST}:{port}")
+    uvicorn.run(create_dashboard_app(runs_dir), host=ANNOTATOR_HOST, port=port, log_config=None)
 
 
 @app.command(name="fetch-drive")
