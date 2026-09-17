@@ -50,12 +50,12 @@ def test_read_epoch_metrics_groups_columns_by_prefix(tmp_path: Path) -> None:
         EpochMetrics(
             epoch=1,
             train_losses={"box_loss": 0.5123, "cls_loss": 0.4123, "dfl_loss": 0.3123},
-            val_losses={"box_loss": 0.6123, "cls_loss": 0.5523, "dfl_loss": 0.4523},
+            val_losses={"box_loss": 0.5523, "cls_loss": 0.4523, "dfl_loss": 0.3523},
             val_metrics={
                 "precision(B)": 0.9123,
                 "recall(B)": 0.8123,
                 "mAP50(B)": 0.8523,
-                "mAP50-95(B)": 0.3523,
+                "mAP50-95(B)": 0.6123,
             },
         )
     ]
