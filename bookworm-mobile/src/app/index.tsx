@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { StyleSheet, Pressable, View, Text, ActivityIndicator, Modal, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { realBookScan, type ScanResult } from '../services/api';
+import { realBookScan, type RecognizedText, type ScanResult } from '../services/api';
 import { useBooks } from '../context/BookContext';
 import { useLiveDetection } from '../hooks/use-live-detection';
 import { scaleBoxToPreview, type Size } from '../hooks/live-detection-geometry';
@@ -10,6 +10,14 @@ import { StarAccent } from '@/components/star-accent';
 import { BookWormPalette, Colors, Radius, Spacing } from '@/constants/theme';
 
 const c = Colors.dark;
+
+// expo-camera's onCameraReady can fire slightly before the native camera
+// session actually accepts takePictureAsync on some devices; this buffer
+// absorbs that gap.
+const CAMERA_READY_GRACE_MS = 400;
+
+const joinRecognizedTexts = (texts: RecognizedText[]): string | undefined =>
+  texts.length > 0 ? texts.map((text) => text.text).join(' · ') : undefined;
 
 export default function HomeScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -28,6 +36,10 @@ export default function HomeScreen() {
   const handleCameraLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     setPreviewSize({ width, height });
+  };
+
+  const handleCameraReady = () => {
+    setTimeout(() => setIsCameraReady(true), CAMERA_READY_GRACE_MS);
   };
 
   const encenderCamara = async () => {
@@ -70,7 +82,7 @@ export default function HomeScreen() {
 
   const guardarLibro = () => {
     if (foundBook) {
-      addBook({ isbn: foundBook.isbn });
+      addBook({ isbn: foundBook.isbn, recognizedText: joinRecognizedTexts(foundBook.texts) });
       setFoundBook(null);
       alert('¡Libro guardado en tu biblioteca!');
     }
@@ -107,12 +119,7 @@ export default function HomeScreen() {
           <View style={styles.cameraBoxActive} onLayout={handleCameraLayout}>
             {permission?.granted ? (
               <>
-                <CameraView
-                  style={styles.camera}
-                  facing="back"
-                  ref={cameraRef}
-                  onCameraReady={() => setIsCameraReady(true)}
-                />
+                <CameraView style={styles.camera} facing="back" ref={cameraRef} onCameraReady={handleCameraReady} />
                 {liveBox && liveFrameSize && previewSize && (
                   <View
                     pointerEvents="none"
@@ -153,9 +160,7 @@ export default function HomeScreen() {
                 {foundBook?.isbn ? `ISBN ${foundBook.isbn}` : 'Sin ISBN leído'}
               </Text>
               <Text style={styles.modalAuthor}>
-                {foundBook?.texts && foundBook.texts.length > 0
-                  ? foundBook.texts.map((text) => text.text).join(' · ')
-                  : 'Sin texto legible en la portada'}
+                {(foundBook && joinRecognizedTexts(foundBook.texts)) ?? 'Sin texto legible en la portada'}
               </Text>
 
               <Pressable style={styles.saveButton} onPress={guardarLibro}>

@@ -6,6 +6,7 @@ export type Book = {
     author?: string;
     isbn: string | null;
     coverImage?: string;
+    recognizedText?: string;
 };
 
 type BookContextType = {

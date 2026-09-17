@@ -61,7 +61,9 @@ export function useLiveDetection(cameraRef: RefObject<any>, isActive: boolean) {
         setFrameSize({ width: resized.width, height: resized.height });
         socket.send(resized.base64);
       } catch (error) {
-        console.error('Error al capturar cuadro en vivo:', error);
+        // A single dropped live-detect frame is expected and self-recovering
+        // (the next poll retries), so this stays a warning, not an error.
+        console.warn('Cuadro en vivo omitido:', error);
       } finally {
         capturingRef.current = false;
       }
